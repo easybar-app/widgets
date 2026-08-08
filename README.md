@@ -72,4 +72,4 @@ make package PACKAGE=package-name OUTPUT_DIR=dist
 Add new integrations below `packages/<name>/`, including their manifest, package README, source,
 assets, and focused tests. Run `make check` before opening a pull request. The complete package
 layout, metadata rules, testing guidance, and registry follow-up are documented in
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[the EasyBar documentation](https://easybar.dev/lua/guides/contributing-widget/).
