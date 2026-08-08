@@ -11,7 +11,23 @@ local SOURCE_PRESENTATION = {
 	color = "#6C8EEF",
 }
 local REGISTRY_URL = "https://raw.githubusercontent.com/easybar-app/widget-registry/main/index.json"
-local POLL_INTERVAL_SECONDS = 6 * 60 * 60
+local STORAGE_WIDGET = "inbox-widgets"
+local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
+local DEFAULT_REFRESH_INTERVAL_MINUTES = 360
+local MINIMUM_REFRESH_INTERVAL_MINUTES = 5
+local MAXIMUM_REFRESH_INTERVAL_MINUTES = 10080
+local configured_refresh_interval =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
+local refresh_interval_minutes = tonumber(configured_refresh_interval)
+if
+	refresh_interval_minutes == nil
+	or refresh_interval_minutes ~= math.floor(refresh_interval_minutes)
+	or refresh_interval_minutes < MINIMUM_REFRESH_INTERVAL_MINUTES
+	or refresh_interval_minutes > MAXIMUM_REFRESH_INTERVAL_MINUTES
+then
+	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
+end
+local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local NETWORK_READY_DELAY_SECONDS = 3
 local MIN_ACTIVITY_COMPLETION_DELAY_SECONDS = 0.2
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
@@ -30,6 +46,13 @@ local state = {
 local pending_refresh = nil
 local refresh
 local log = easybar.log
+
+if refresh_interval_minutes ~= configured_refresh_interval then
+	log(
+		easybar.level.warn,
+		"invalid widgets.inbox-widgets.refresh_interval_minutes; using " .. tostring(DEFAULT_REFRESH_INTERVAL_MINUTES)
+	)
+end
 
 local function installed_database_path()
 	local active_directory = os.getenv("EASYBAR_INTERNAL_WIDGET_PACKAGES_DIRECTORY")

@@ -2,8 +2,8 @@ local root = assert(arg[1], "repository root argument is required")
 local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
-local function load_widget()
-	return host.load(root, easybar_root, "inbox-widgets")
+local function load_widget(storage_values)
+	return host.load(root, easybar_root, "inbox-widgets", storage_values)
 end
 
 local function complete_refresh(state, installed_fixture, registry_fixture)
@@ -58,8 +58,15 @@ local function test_invalid_registry_retains_the_last_snapshot()
 	assert(state:item("error") ~= nil, "a failed check must publish an error")
 end
 
+local function test_configures_the_refresh_interval()
+	local state = load_widget({ ["inbox-widgets:refresh_interval_minutes"] = 15 })
+	local timer = assert(state.added_items.easybar_package_updates_timer, "the package update timer must exist")
+	assert(timer.interval == 15 * 60, "the timer must use the configured refresh interval")
+end
+
 test_finds_registry_updates_and_ignores_local_packages()
 test_update_runs_the_package_installer_and_rechecks()
 test_invalid_registry_retains_the_last_snapshot()
+test_configures_the_refresh_interval()
 
 print("Widgets inbox regression checks passed")

@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-widgets"
-version = "0.2.0"
+version = "0.3.0"
 kind = "widget"
 description = "EasyBar package updates in the native inbox."
 license = "Apache-2.0"
@@ -19,3 +19,12 @@ shared = "^0.1.0"
 [requirements]
 commands = ["curl", "easybar"]
 native_inbox = true
+
+[[settings]]
+namespace = "inbox-widgets"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 5
+maximum = 10080
+default = 360
+description = "Minutes between automatic widget update checks."

@@ -201,7 +201,7 @@ local function decoded_fixture(value)
 	error("unexpected JSON fixture: " .. tostring(value))
 end
 
-local function make_host(root, package_name)
+local function make_host(root, package_name, initial_storage_values)
 	local state = {
 		configuration = nil,
 		items = {},
@@ -209,7 +209,8 @@ local function make_host(root, package_name)
 		context_action_handler = nil,
 		commands = {},
 		timers = {},
-		storage_values = {},
+		storage_values = initial_storage_values or {},
+		added_items = {},
 		next_token = 0,
 	}
 
@@ -261,7 +262,8 @@ local function make_host(root, package_name)
 		return root .. "/packages/" .. package_name .. "/" .. path
 	end
 
-	function easybar.add()
+	function easybar.add(_, name, props)
+		state.added_items[name] = props
 		return { subscribe = function() end }
 	end
 
@@ -365,9 +367,9 @@ local function make_host(root, package_name)
 	return easybar, state
 end
 
-function M.load(root, easybar_root, package_name)
+function M.load(root, easybar_root, package_name, initial_storage_values)
 	configure(root, easybar_root)
-	local easybar, state = make_host(root, package_name)
+	local easybar, state = make_host(root, package_name, initial_storage_values)
 	local path = root .. "/packages/" .. package_name .. "/widget.lua"
 	local environment = setmetatable({ easybar = easybar }, { __index = _G })
 	local chunk, load_error = loadfile(path, "t", environment)
