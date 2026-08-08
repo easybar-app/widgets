@@ -37,17 +37,36 @@ The metadata validator checks package identity, versions, compatibility, entrypo
 
 ## Releases
 
-Packages are released independently from this monorepo. Create and push a tag named
-`<package>-v<version>`, where the version matches that package's `package.toml`:
+Packages are versioned and released independently from this monorepo. First bump one package's
+stable semantic version:
 
 ```sh
-git tag caffeinate-v0.1.0
-git push origin caffeinate-v0.1.0
+make bump PACKAGE=wireguard LEVEL=patch
 ```
 
-The release workflow runs the full package test suite, creates the deterministic
-`caffeinate-0.1.0.tar.gz` archive, uploads its SHA-256 checksum, and prints the exact registry
-metadata in the workflow summary. Released archives contain `package.toml` at their root.
+`LEVEL` must be `patch`, `minor`, or `major`. The command updates the version in
+`packages/wireguard/package.toml` and runs all package checks. Review and commit that change, then
+push `main`:
+
+```sh
+git add packages/wireguard/package.toml
+git commit -m "chore(wireguard): prepare 0.1.1"
+git push origin main
+```
+
+Create the release only after the version commit is on `main`:
+
+```sh
+make release PACKAGE=wireguard
+```
+
+The release command requires a clean `main` branch that exactly matches `origin/main`, reruns all
+checks, creates the annotated `wireguard-v0.1.1` tag, and pushes only that tag. The GitHub release
+workflow then creates the deterministic `wireguard-0.1.1.tar.gz` archive and its SHA-256 checksum.
+Released archives contain only that package, with `package.toml` at their root.
+
+The [widget registry](https://github.com/easybar-app/widget-registry) periodically discovers new
+published releases and updates its immutable version metadata automatically.
 
 Build the same archive locally with:
 
