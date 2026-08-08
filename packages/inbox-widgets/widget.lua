@@ -241,11 +241,23 @@ local function configure_source_actions()
 					busy = operation.item_id == nil,
 					include_in_refresh_all = operation.kind == "refresh" or nil,
 				},
+				{
+					id = "refresh_interval",
+					title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+					enabled = false,
+				},
 			},
 		})
 	else
 		easybar.inbox.configure(SOURCE, {
-			actions = { { id = "refresh", title = "Refresh", include_in_refresh_all = true } },
+			actions = {
+				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
+				{
+					id = "refresh_interval",
+					title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+					enabled = false,
+				},
+			},
 		})
 	end
 end

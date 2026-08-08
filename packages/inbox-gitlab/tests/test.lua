@@ -3,8 +3,18 @@ local easybar_root = assert(arg[2], "EasyBar repository root argument is require
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 local _, inbox = host.modules(root, easybar_root)
 
-local function load_widget()
-	return host.load(root, easybar_root, "inbox-gitlab")
+local function load_widget(storage_values)
+	return host.load(root, easybar_root, "inbox-gitlab", storage_values)
+end
+
+local function test_configures_the_refresh_interval()
+	local state = load_widget({ ["gitlab-inbox:refresh_interval_minutes"] = 15 })
+	local timer = assert(state.added_items.gitlab_inbox_timer, "the GitLab inbox timer must exist")
+	assert(timer.interval == 15 * 60, "the GitLab timer must use the configured refresh interval")
+	assert(
+		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
+		"the GitLab context menu must show the refresh interval"
+	)
 end
 
 local function test_merge_method_setting_persists_and_drives_merge()
@@ -128,5 +138,6 @@ test_merge_method_setting_persists_and_drives_merge()
 test_merge_confirmation_defaults_to_immediate()
 test_mark_read_stays_local()
 test_errors_retain_snapshot()
+test_configures_the_refresh_interval()
 
 print("GitLab inbox widget regression checks passed")

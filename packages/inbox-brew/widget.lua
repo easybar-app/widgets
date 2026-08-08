@@ -12,7 +12,25 @@ local SOURCE_PRESENTATION = {
 	icon = easybar.asset("assets/brew.svg"),
 	color = "#FBB040",
 }
-local POLL_INTERVAL_SECONDS = 30 * 60
+local STORAGE_WIDGET = "brew-inbox"
+local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
+local DEFAULT_REFRESH_INTERVAL_MINUTES = 30
+local configured_refresh_interval =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
+local refresh_interval_minutes = tonumber(configured_refresh_interval)
+if
+	refresh_interval_minutes == nil
+	or refresh_interval_minutes ~= math.floor(refresh_interval_minutes)
+	or refresh_interval_minutes < 5
+	or refresh_interval_minutes > 10080
+then
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.brew-inbox.refresh_interval_minutes; using " .. tostring(DEFAULT_REFRESH_INTERVAL_MINUTES)
+	)
+	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
+end
+local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local NETWORK_READY_DELAY_SECONDS = 3
 local MIN_ACTIVITY_COMPLETION_DELAY_SECONDS = 0.2
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
@@ -267,6 +285,11 @@ local function configure_source_actions()
 			},
 		}
 	end
+	actions[#actions + 1] = {
+		id = "refresh_interval",
+		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+		enabled = false,
+	}
 	easybar.inbox.configure(SOURCE, { actions = actions })
 end
 

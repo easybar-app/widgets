@@ -2,8 +2,19 @@ local root = assert(arg[1], "repository root argument is required")
 local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
-local function load_widget()
-	return host.load(root, easybar_root, "inbox-brew")
+local function load_widget(storage_values)
+	return host.load(root, easybar_root, "inbox-brew", storage_values)
+end
+
+local function test_configures_the_refresh_interval()
+	local state = load_widget({ ["brew-inbox:refresh_interval_minutes"] = 15 })
+	local timer = assert(state.added_items.brew_inbox_timer, "the Homebrew inbox timer must exist")
+	assert(timer.interval == 15 * 60, "the Homebrew timer must use the configured refresh interval")
+	state:run_next_timer()
+	assert(
+		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
+		"the Homebrew context menu must show the refresh interval"
+	)
 end
 
 local function test_item_refresh_stays_inline()
@@ -87,5 +98,6 @@ test_item_refresh_stays_inline()
 test_parser_retains_snapshot_and_handles_warning_braces()
 test_refresh_cancellation_clears_activity()
 test_mutation_cancellation_reconciles_snapshot()
+test_configures_the_refresh_interval()
 
 print("Homebrew inbox widget regression checks passed")

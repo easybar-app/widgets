@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-gitlab"
-version = "0.1.0"
+version = "0.2.0"
 kind = "widget"
 description = "GitLab work items and merge-request actions in EasyBar's native inbox."
 license = "Apache-2.0"
@@ -20,6 +20,15 @@ shared = "^0.1.0"
 commands = ["glab"]
 optional_environment = ["GITLAB_HOST"]
 native_inbox = true
+
+[[settings]]
+namespace = "gitlab-inbox"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 5
+maximum = 10080
+default = 5
+description = "Minutes between automatic GitLab work-item checks."
 
 [[settings]]
 namespace = "gitlab-inbox"

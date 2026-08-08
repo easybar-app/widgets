@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-brew"
-version = "0.1.1"
+version = "0.2.0"
 kind = "widget"
 description = "Homebrew updates and actions in EasyBar's native inbox."
 license = "Apache-2.0"
@@ -20,3 +20,12 @@ shared = "^0.1.0"
 [requirements]
 commands = ["brew"]
 native_inbox = true
+
+[[settings]]
+namespace = "brew-inbox"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 5
+maximum = 10080
+default = 30
+description = "Minutes between automatic Homebrew update checks."

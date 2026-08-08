@@ -11,3 +11,14 @@ visible but are not upgraded automatically. It does not depend on or activate th
 widget.
 
 The standalone popup presentation is the `brew` package. Install only one Homebrew presentation unless duplicate polling is intentional.
+
+## Configuration
+
+Automatic checks run every 30 minutes by default. Set an interval from 5 minutes to 7 days and reload EasyBar:
+
+```toml
+[widgets.brew-inbox]
+refresh_interval_minutes = 30
+```
+
+The source context menu shows the active refresh interval.

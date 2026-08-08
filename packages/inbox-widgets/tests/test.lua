@@ -62,6 +62,11 @@ local function test_configures_the_refresh_interval()
 	local state = load_widget({ ["inbox-widgets:refresh_interval_minutes"] = 15 })
 	local timer = assert(state.added_items.easybar_package_updates_timer, "the package update timer must exist")
 	assert(timer.interval == 15 * 60, "the timer must use the configured refresh interval")
+	state:run_next_timer()
+	assert(
+		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
+		"the Widgets context menu must show the refresh interval"
+	)
 end
 
 test_finds_registry_updates_and_ignores_local_packages()

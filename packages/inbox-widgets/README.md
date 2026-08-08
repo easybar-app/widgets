@@ -19,6 +19,8 @@ Reload EasyBar after changing it:
 easybar config reload
 ```
 
+The source context menu shows the active refresh interval.
+
 Only packages whose recorded installation source matches a release in the official registry are checked. Packages installed from a local directory, custom archive, or another registry are left untouched.
 
 If you installed the former `inbox-widget-updates` 0.1.0 package, remove it before installing this renamed package:

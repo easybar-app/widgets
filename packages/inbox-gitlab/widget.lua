@@ -11,7 +11,6 @@ local SOURCE_PRESENTATION = {
 	icon = easybar.asset("assets/gitlab.svg"),
 	color = "#FC6D26",
 }
-local POLL_INTERVAL_SECONDS = 300
 local NETWORK_READY_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 local MAX_ITEMS = 500
@@ -21,8 +20,10 @@ local MERGE_REQUEST_MERGE_TIMEOUT_SECONDS = 5 * 60
 local STORAGE_WIDGET = "gitlab-inbox"
 local STORAGE_MERGE_METHOD_KEY = "merge_method"
 local STORAGE_CONFIRM_MERGE_KEY = "confirm_merge"
+local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
 local DEFAULT_MERGE_METHOD = "merge"
 local DEFAULT_CONFIRM_MERGE = false
+local DEFAULT_REFRESH_INTERVAL_MINUTES = 5
 local MERGE_METHOD_ORDER = { "merge", "squash", "rebase" }
 local MERGE_METHOD_FLAGS = {
 	merge = false,
@@ -46,6 +47,22 @@ local merge_method = MERGE_METHOD_FLAGS[configured_merge_method] ~= nil and conf
 local configured_confirm_merge = easybar.storage.get(STORAGE_WIDGET, STORAGE_CONFIRM_MERGE_KEY, DEFAULT_CONFIRM_MERGE)
 local merge_confirmation_required = type(configured_confirm_merge) == "boolean" and configured_confirm_merge
 	or DEFAULT_CONFIRM_MERGE
+local configured_refresh_interval =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
+local refresh_interval_minutes = tonumber(configured_refresh_interval)
+if
+	refresh_interval_minutes == nil
+	or refresh_interval_minutes ~= math.floor(refresh_interval_minutes)
+	or refresh_interval_minutes < 5
+	or refresh_interval_minutes > 10080
+then
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.gitlab-inbox.refresh_interval_minutes; using " .. tostring(DEFAULT_REFRESH_INTERVAL_MINUTES)
+	)
+	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
+end
+local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local issues = {}
 local merge_requests = {}
 local current_error = nil
@@ -119,6 +136,11 @@ local function configure_source_actions()
 	else
 		actions = { { id = "refresh", title = "Refresh", include_in_refresh_all = true } }
 	end
+	actions[#actions + 1] = {
+		id = "refresh_interval",
+		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+		enabled = false,
+	}
 	append_merge_method_actions(actions)
 	append_merge_confirmation_actions(actions)
 	easybar.inbox.configure(SOURCE, { actions = actions })
