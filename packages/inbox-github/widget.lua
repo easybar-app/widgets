@@ -203,9 +203,7 @@ local function item_actions(notification, item_id)
 	local busy_action = busy_item_actions[item_id]
 	local confirmation = merge_confirmations[item_id]
 
-	if busy_action == "mark_read" then
-		append_action(actions, "mark_read", "Marking read…", false, true)
-	elseif busy_action == "prepare_merge" then
+	if busy_action == "prepare_merge" then
 		append_action(actions, "prepare_merge", "Checking merge…", false, true)
 	elseif busy_action == "confirm_merge" then
 		append_action(actions, "confirm_merge", "Merging…", false, true)
@@ -213,7 +211,6 @@ local function item_actions(notification, item_id)
 		append_action(actions, "confirm_merge", "Confirm " .. merge_method_title(pr_merge_method), true, false)
 		append_action(actions, "cancel_merge", "Cancel", true, false)
 	else
-		append_action(actions, "mark_read", "Mark as read", true, false)
 		if notification.subject.type == "PullRequest" then
 			append_action(actions, "prepare_merge", "Merge", true, false)
 		end
@@ -811,29 +808,6 @@ easybar.inbox.on_action(SOURCE, function(event)
 
 	if action_id == "refresh" then
 		refresh("manual")
-	elseif action_id == "mark_read" then
-		if item_id ~= "" and busy_item_actions[item_id] == nil then
-			busy_item_actions[item_id] = "mark_read"
-			merge_confirmations[item_id] = nil
-			publish_current_notifications()
-			log(easybar.level.info, "inbox mutation started operation=mark_read item_id=" .. item_id)
-			easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. item_id }, {
-				timeout_seconds = 20,
-				log_operation = "mark_read",
-			}, function(_, code)
-				if code == 0 then
-					log(easybar.level.info, "inbox mutation completed operation=mark_read item_id=" .. item_id)
-					refresh("post_mutation", item_id)
-				else
-					busy_item_actions[item_id] = nil
-					log(
-						easybar.level.error,
-						"inbox mutation failed operation=mark_read item_id=" .. item_id .. " status=" .. tostring(code)
-					)
-					publish_error(nil, "GitHub could not mark the notification as read")
-				end
-			end)
-		end
 	elseif action_id == "prepare_merge" then
 		prepare_merge(item_id)
 	elseif action_id == "confirm_merge" then

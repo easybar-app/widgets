@@ -26,7 +26,7 @@ local function test_configures_the_refresh_interval()
 	assert(assert(state:item("thread-1")).source.order == 17, "the GitHub source must use the configured order")
 end
 
-local function test_item_refresh_stays_inline()
+local function test_item_actions_do_not_duplicate_native_controls()
 	local state = load_widget()
 	state:run_next_timer()
 	assert(state:has_busy_source_action(), "GitHub startup refresh must show source activity")
@@ -36,18 +36,15 @@ local function test_item_refresh_stays_inline()
 	assert(item.url == "https://github.com/easybar/easybar/pull/1", "GitHub notification must use the native URL field")
 	assert(item.timestamp == inbox.timestamp("2026-08-03T09:45:00Z"), "GitHub notification must publish updated_at")
 	assert(not state:item_has_action("thread-1", "open"), "GitHub notification must not duplicate the native Open action")
-
-	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-1" })
-	assert(state:item_action_is_busy("thread-1", "mark_read"), "GitHub item mutation must show inline activity")
-	assert(not state:has_busy_source_action(), "GitHub item mutation must not show source activity")
-
-	state:complete_next_command("", 0)
-	assert(state:item_action_is_busy("thread-1", "mark_read"), "GitHub post-mutation refresh must stay inline")
-	assert(not state:has_busy_source_action(), "GitHub post-mutation refresh must not show source activity")
-
-	state:complete_next_command("github-empty", 0)
-	assert(state:item("thread-1") == nil, "GitHub refreshed item must disappear")
-	assert(not state:has_busy_source_action(), "GitHub item completion must remain source-idle")
+	assert(
+		not state:item_has_action("thread-1", "mark_read"),
+		"GitHub notification must not duplicate the native read action"
+	)
+	assert(
+		not state:item_has_action("thread-1", "dismiss"),
+		"GitHub notification must not duplicate the native Dismiss action"
+	)
+	assert(state:item_has_action("thread-1", "prepare_merge"), "pull requests must retain their Merge action")
 end
 
 local function test_merge_method_setting_persists_and_drives_merge()
@@ -117,28 +114,6 @@ local function test_merge_confirmation_defaults_to_immediate()
 	assert(arguments["0123456789abcdef"], "GitHub immediate mode must merge the inspected head commit")
 end
 
-local function test_overlapping_mutations_coalesce_refresh()
-	local state = load_widget()
-	state:run_next_timer()
-	state:complete_next_command("github-two", 0)
-
-	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-1" })
-	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-2" })
-	assert(#state.commands == 2, "GitHub mutations must be allowed to overlap across items")
-
-	state:complete_command(1, "", 0)
-	assert(#state.commands == 2, "first GitHub mutation must start its refresh")
-	state:complete_command(1, "", 0)
-	assert(#state.commands == 1, "second GitHub mutation must queue behind the active refresh")
-	assert(state:item_action_is_busy("thread-2", "mark_read"), "queued GitHub mutation must remain visibly busy")
-
-	state:complete_next_command("github-second", 0)
-	assert(#state.commands == 1, "queued GitHub mutation must start a follow-up refresh")
-	assert(state:item_action_is_busy("thread-2", "mark_read"), "queued item must stay busy through the first refresh")
-	state:complete_next_command("github-empty", 0)
-	assert(state:item("thread-2") == nil, "follow-up refresh must observe the second mutation")
-end
-
 local function test_errors_retain_snapshot()
 	local state = load_widget()
 	state:run_next_timer()
@@ -155,10 +130,9 @@ local function test_errors_retain_snapshot()
 	assert(state:item("error") ~= nil, "GitHub malformed responses must publish an error")
 end
 
-test_item_refresh_stays_inline()
+test_item_actions_do_not_duplicate_native_controls()
 test_merge_method_setting_persists_and_drives_merge()
 test_merge_confirmation_defaults_to_immediate()
-test_overlapping_mutations_coalesce_refresh()
 test_errors_retain_snapshot()
 test_configures_the_refresh_interval()
 
