@@ -7,6 +7,8 @@
       "?/init.lua",
       "packages/?.lua",
       "packages/?/init.lua",
+      "packages/brew-policy/?.lua",
+      "packages/brew-policy/?/init.lua",
       "packages/shared/?.lua",
       "packages/shared/?/init.lua",
       "tests/?.lua",

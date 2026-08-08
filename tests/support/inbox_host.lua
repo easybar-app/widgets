@@ -12,6 +12,7 @@ local function configure(root, easybar_root)
 	end
 
 	package.path = table.concat({
+		root .. "/packages/brew-policy/?.lua",
 		root .. "/packages/shared/?.lua",
 		root .. "/packages/shared/?/init.lua",
 		root .. "/packages/?.lua",

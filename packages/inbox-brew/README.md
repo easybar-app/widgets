@@ -6,6 +6,8 @@
 
 Homebrew must be available through `[app.env].PATH`, and the native inbox must be enabled.
 
-The widget depends on the `brew` package's exported `brew.policy` module so packages requiring manual handling remain visible but are not upgraded automatically.
+The widget depends on the small `brew-policy` library so packages requiring manual handling remain
+visible but are not upgraded automatically. It does not depend on or activate the standalone `brew`
+widget.
 
 The standalone popup presentation is the `brew` package. Install only one Homebrew presentation unless duplicate polling is intentional.

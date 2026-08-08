@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-brew"
-version = "0.1.0"
+version = "0.1.1"
 kind = "widget"
 description = "Homebrew updates and actions in EasyBar's native inbox."
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ url = "https://github.com/easybar-app/widgets"
 path = "packages/inbox-brew"
 
 [dependencies]
-brew = "^0.1.0"
+brew-policy = "^0.1.0"
 shared = "^0.1.0"
 
 [requirements]

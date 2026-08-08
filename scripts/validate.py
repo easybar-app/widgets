@@ -138,6 +138,17 @@ def validate_cycles(manifests: dict[str, tuple[Path, dict]]) -> None:
         visit(name)
 
 
+def validate_dependency_kinds(manifests: dict[str, tuple[Path, dict]]) -> None:
+    for name, (_, manifest) in manifests.items():
+        for dependency in manifest.get("dependencies", {}):
+            dependency_kind = manifests[dependency][1].get("kind")
+            if dependency_kind != "library":
+                fail(
+                    f"{name}: dependency {dependency} must be a library, "
+                    f"not {dependency_kind}"
+                )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--print-widgets", action="store_true")
@@ -147,6 +158,7 @@ def main() -> int:
         names = set(manifests)
         for name, (package_dir, manifest) in manifests.items():
             validate_manifest(name, package_dir, manifest, names)
+        validate_dependency_kinds(manifests)
         validate_cycles(manifests)
     except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
         print(f"Package validation failed: {error}", file=sys.stderr)

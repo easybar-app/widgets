@@ -9,6 +9,7 @@ Homebrew must be available through `[app.env].PATH`.
 ## Files
 
 - `widget.lua`: standalone bar and popup implementation
-- `policy.lua`: manual-upgrade policy shared with the inbox publisher
+
+The shared manual-upgrade rules come from the `brew-policy` library dependency.
 
 The alternative native-inbox presentation is the `inbox-brew` package. Install only one Homebrew presentation unless duplicate polling is intentional.

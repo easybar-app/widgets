@@ -1,0 +1,16 @@
+manifest_version = 1
+name = "brew-policy"
+version = "0.1.0"
+kind = "library"
+description = "Shared Homebrew manual-upgrade policy for EasyBar widgets."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+readme = "README.md"
+categories = ["developer-tools", "library", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/brew-policy"
+
+[exports]
+brew_policy = "brew_policy.lua"
