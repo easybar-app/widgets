@@ -253,6 +253,11 @@ local function configure_source_actions()
 			actions = {
 				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{
+					id = "update_all",
+					title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",
+					enabled = #state.updates > 0,
+				},
+				{
 					id = "refresh_interval",
 					title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
 					enabled = false,
@@ -401,37 +406,41 @@ refresh = function(reason, activity_item_id)
 	end)
 end
 
-local function update_package(package)
+local function run_update(arguments, title, item_id)
 	if state.operation ~= nil then
 		return
 	end
 	local operation = {
 		kind = "update",
-		title = "Updating " .. package.name .. "…",
-		item_id = package.id,
+		title = title .. "…",
+		item_id = item_id,
 	}
 	state.operation = operation
 	state.error = nil
 	publish()
 
-	easybar.spawn_async(
-		{ "/usr/bin/env", "easybar", "widgets", "install", package.name },
-		EXEC.update,
-		function(output, code)
-			if code ~= 0 then
-				fail_operation(
-					operation,
-					"Could not update " .. package.name,
-					output,
-					"easybar widgets install exited with code " .. tostring(code)
-				)
-				return
-			end
-			finish_operation(operation, function()
-				refresh("post_update", package.id)
-			end)
+	easybar.spawn_async(arguments, EXEC.update, function(output, code)
+		if code ~= 0 then
+			fail_operation(
+				operation,
+				"Could not update widgets",
+				output,
+				"easybar widgets update exited with code " .. tostring(code)
+			)
+			return
 		end
-	)
+		finish_operation(operation, function()
+			refresh("post_update", item_id)
+		end)
+	end)
+end
+
+local function update_package(package)
+	run_update({ "/usr/bin/env", "easybar", "widgets", "update", package.name }, "Updating " .. package.name, package.id)
+end
+
+local function update_all_packages()
+	run_update({ "/usr/bin/env", "easybar", "widgets", "update", "--all" }, "Updating all widgets", nil)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
@@ -447,8 +456,11 @@ easybar.inbox.on_action(SOURCE, function(event)
 end)
 
 easybar.inbox.on_context_action(SOURCE, function(event)
-	if tostring(event.action_id or "") == "refresh" then
+	local action_id = tostring(event.action_id or "")
+	if action_id == "refresh" then
 		refresh("manual")
+	elseif action_id == "update_all" and #state.updates > 0 then
+		update_all_packages()
 	end
 end)
 

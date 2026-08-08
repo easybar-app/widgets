@@ -2,7 +2,7 @@
 
 `widget.lua` checks the official EasyBar widget registry and publishes available package updates to EasyBar's native inbox.
 
-Use **Update** on an inbox item to install that package's latest registry release. The source menu also provides a manual **Refresh** action; checks otherwise run every six hours and after wake or session activation.
+Use **Update** on an inbox item to install that package's latest registry release. The source menu provides **Update all** and a manual **Refresh** action; checks otherwise run every six hours and after wake or session activation. These actions use `easybar widgets update`, so the same update behavior is available from the terminal.
 
 ## Configuration
 
@@ -31,4 +31,4 @@ easybar widgets uninstall inbox-widget-updates
 
 ## Requirements
 
-The widget requires `curl` and the `easybar` CLI in `[app.env].PATH`.
+The widget requires EasyBar 0.44.0 or newer, plus `curl` and the `easybar` CLI in `[app.env].PATH`.

@@ -1,10 +1,10 @@
 manifest_version = 1
 name = "inbox-widgets"
-version = "0.4.0"
+version = "0.5.0"
 kind = "widget"
 description = "EasyBar package updates in the native inbox."
 license = "Apache-2.0"
-minimum_easybar_version = "0.41.0"
+minimum_easybar_version = "0.44.0"
 entrypoint = "widget.lua"
 readme = "README.md"
 categories = ["inbox", "system", "utilities"]

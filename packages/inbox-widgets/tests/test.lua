@@ -25,9 +25,10 @@ local function test_finds_registry_updates_and_ignores_local_packages()
 	assert(state:item("package:local-tool") == nil, "a locally installed package must not be replaced from the registry")
 	assert(state:item("package:shared") == nil, "a current package must not be published")
 	assert(not state:has_busy_source_action(), "the completed check must clear source activity")
+	assert(assert(state:source_action("update_all")).title == "Update all (1)", "the source must offer all updates")
 end
 
-local function test_update_runs_the_package_installer_and_rechecks()
+local function test_update_runs_the_package_updater_and_rechecks()
 	local state = load_widget()
 	state:run_next_timer()
 	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
@@ -36,8 +37,8 @@ local function test_update_runs_the_package_installer_and_rechecks()
 	assert(state:item_action_is_busy("package:brew", "update"), "the package update must show inline activity")
 	local command = state.commands[1].command
 	assert(
-		table.concat(command, " ") == "/usr/bin/env easybar widgets install brew",
-		"the update action must reinstall the selected registry package"
+		table.concat(command, " ") == "/usr/bin/env easybar widgets update brew",
+		"the update action must update the selected registry package"
 	)
 
 	state:complete_next_command("Installed brew 0.2.0", 0)
@@ -45,6 +46,19 @@ local function test_update_runs_the_package_installer_and_rechecks()
 	assert(state.commands[1].command[1] == "/bin/cat", "a successful update must recheck installed state")
 	complete_refresh(state, "inbox-widgets-current", "inbox-widgets-registry")
 	assert(state:item("package:brew") == nil, "the updated package must disappear from the inbox")
+end
+
+local function test_update_all_uses_the_cli_update_command()
+	local state = load_widget()
+	state:run_next_timer()
+	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
+
+	state.context_action_handler({ action_id = "update_all" })
+	assert(state:has_busy_source_action(), "updating all packages must show source activity")
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar widgets update --all",
+		"the source action must use the CLI all-packages update"
+	)
 end
 
 local function test_invalid_registry_retains_the_last_snapshot()
@@ -70,7 +84,8 @@ local function test_configures_the_refresh_interval()
 end
 
 test_finds_registry_updates_and_ignores_local_packages()
-test_update_runs_the_package_installer_and_rechecks()
+test_update_runs_the_package_updater_and_rechecks()
+test_update_all_uses_the_cli_update_command()
 test_invalid_registry_retains_the_last_snapshot()
 test_configures_the_refresh_interval()
 
