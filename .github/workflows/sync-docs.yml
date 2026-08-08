@@ -1,0 +1,44 @@
+name: Sync package docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-package-docs
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require EasyBar docs token
+        env:
+          EASYBAR_DOCS_TOKEN: ${{ secrets.EASYBAR_DOCS_TOKEN }}
+        run: |
+          if [[ -z "${EASYBAR_DOCS_TOKEN}" ]]; then
+            echo "::error::Add EASYBAR_DOCS_TOKEN with Contents: write access to easybar-app/easybar."
+            exit 1
+          fi
+
+      - name: Trigger package catalog sync
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.EASYBAR_DOCS_TOKEN }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: "easybar-app",
+              repo: "easybar",
+              event_type: "widgets-packages-updated",
+              client_payload: {
+                widgets_sha: context.sha,
+              },
+            });
