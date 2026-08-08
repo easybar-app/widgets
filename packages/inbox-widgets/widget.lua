@@ -250,6 +250,7 @@ local function configure_source_actions()
 	if operation ~= nil then
 		easybar.inbox.configure(SOURCE, {
 			order = context_order,
+			presentation = SOURCE_PRESENTATION,
 			actions = {
 				{
 					id = "activity",
@@ -268,6 +269,7 @@ local function configure_source_actions()
 	else
 		easybar.inbox.configure(SOURCE, {
 			order = context_order,
+			presentation = SOURCE_PRESENTATION,
 			actions = {
 				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{

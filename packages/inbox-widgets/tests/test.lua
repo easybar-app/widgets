@@ -81,6 +81,10 @@ local function test_configures_the_refresh_interval()
 	local timer = assert(state.added_items.easybar_package_updates_timer, "the package update timer must exist")
 	assert(timer.interval == 15 * 60, "the timer must use the configured refresh interval")
 	state:run_next_timer()
+	assert(
+		type(state.configuration.presentation.icon) == "string",
+		"Widgets refresh activity must retain its source icon"
+	)
 	assert(state.configuration.order == 38, "the Widgets context must use the configured order")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",

@@ -20,6 +20,7 @@ local function test_configures_the_refresh_interval()
 		"the GitHub context menu must show the refresh interval"
 	)
 	state:run_next_timer()
+	assert(type(state.configuration.presentation.icon) == "string", "GitHub refresh activity must retain its source icon")
 	assert(state.configuration.order == 18, "the GitHub context must use the configured order")
 	state:complete_next_command("github-one", 0)
 	assert(assert(state:item("thread-1")).source.order == 17, "the GitHub source must use the configured order")

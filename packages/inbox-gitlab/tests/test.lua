@@ -20,6 +20,7 @@ local function test_configures_the_refresh_interval()
 		"the GitLab context menu must show the refresh interval"
 	)
 	state:run_next_timer()
+	assert(type(state.configuration.presentation.icon) == "string", "GitLab refresh activity must retain its source icon")
 	assert(state.configuration.order == 28, "the GitLab context must use the configured order")
 	state:complete_next_command("gitlab-issues", 0)
 	state:complete_next_command("gitlab-merge-requests", 0)

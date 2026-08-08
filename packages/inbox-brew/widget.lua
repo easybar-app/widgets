@@ -306,7 +306,11 @@ local function configure_source_actions()
 		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
 		enabled = false,
 	}
-	easybar.inbox.configure(SOURCE, { order = context_order, actions = actions })
+	easybar.inbox.configure(SOURCE, {
+		order = context_order,
+		presentation = SOURCE_PRESENTATION,
+		actions = actions,
+	})
 end
 
 local function publish()

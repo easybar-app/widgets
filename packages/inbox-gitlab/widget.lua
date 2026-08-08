@@ -159,7 +159,11 @@ local function configure_source_actions()
 	}
 	append_merge_method_actions(actions)
 	append_merge_confirmation_actions(actions)
-	easybar.inbox.configure(SOURCE, { order = context_order, actions = actions })
+	easybar.inbox.configure(SOURCE, {
+		order = context_order,
+		presentation = SOURCE_PRESENTATION,
+		actions = actions,
+	})
 end
 
 local function set_source_activity(title)
