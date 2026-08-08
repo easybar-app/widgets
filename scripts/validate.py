@@ -86,7 +86,11 @@ def validate_manifest(name: str, package_dir: Path, manifest: dict, names: set[s
             fail(f"{name}: export {module} must be Lua")
         declared_lua.add(exported)
 
-    actual_lua = set(package_dir.rglob("*.lua"))
+    actual_lua = {
+        path
+        for path in package_dir.rglob("*.lua")
+        if path.relative_to(package_dir).parts[0] != "tests"
+    }
     undeclared = sorted(path.relative_to(package_dir) for path in actual_lua - declared_lua)
     if undeclared:
         fail(f"{name}: undeclared Lua files: {', '.join(map(str, undeclared))}")

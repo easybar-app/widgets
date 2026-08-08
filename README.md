@@ -35,6 +35,8 @@ make check EASYBAR_ROOT=/path/to/easybar
 
 The metadata validator checks package identity, versions, compatibility, entrypoints, exported modules, dependency cycles, repository paths, and static asset references.
 
+Focused tests live beside their package under `packages/<name>/tests/`. Shared test hosts and the cross-package smoke test remain under `tests/`. Package-local test directories are validated and executed by `make check`, but are excluded from release archives.
+
 ## Releases
 
 Packages are versioned and released independently from this monorepo. First bump one package's

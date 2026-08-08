@@ -36,13 +36,16 @@ def archive_info(name: str, size: int, mode: int) -> tarfile.TarInfo:
 def package_files(package_dir: Path) -> list[tuple[str, Path]]:
     files: list[tuple[str, Path]] = []
     for path in sorted(package_dir.rglob("*")):
+        relative_path = path.relative_to(package_dir)
+        if relative_path.parts[0] == "tests":
+            continue
         if path.is_symlink():
             fail(f"{package_dir.name}: symbolic links are not allowed: {path.name}")
         if path.is_dir():
             continue
         if not path.is_file():
             fail(f"{package_dir.name}: unsupported package entry: {path.name}")
-        files.append((path.relative_to(package_dir).as_posix(), path))
+        files.append((relative_path.as_posix(), path))
 
     if not any(relative == "LICENSE" for relative, _ in files):
         files.append(("LICENSE", LICENSE))

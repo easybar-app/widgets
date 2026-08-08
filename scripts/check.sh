@@ -24,7 +24,7 @@ test_count=0
 while IFS= read -r test_file; do
   test_count=$((test_count + 1))
   "${lua_bin}" "${test_file}" "${repo_root}" "${easybar_root}"
-done < <(find "${repo_root}/tests/packages" -type f -name 'test.lua' -print | LC_ALL=C sort)
+done < <(find "${repo_root}/packages" -path '*/tests/*' -type f -name '*.lua' -print | LC_ALL=C sort)
 
 while IFS=$'\t' read -r package entrypoint; do
   test_count=$((test_count + 1))
