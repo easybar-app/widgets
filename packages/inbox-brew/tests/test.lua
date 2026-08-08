@@ -26,7 +26,11 @@ local function test_configures_the_refresh_interval()
 	)
 	state:complete_next_command('{"scenario":"brew-one"}', 0)
 	state:run_next_timer()
-	assert(assert(state:item("formula:easybar")).source.order == 7, "the Homebrew source must use the configured order")
+	local item = assert(state:item("formula:easybar"))
+	assert(item.source.order == 7, "the Homebrew source must use the configured order")
+	assert(not state:item_has_action(item.id, "open"), "Homebrew must not duplicate the native Open action")
+	assert(not state:item_has_action(item.id, "mark_read"), "Homebrew must not duplicate the native read action")
+	assert(not state:item_has_action(item.id, "dismiss"), "Homebrew must not duplicate the native Dismiss action")
 end
 
 local function test_item_refresh_stays_inline()
