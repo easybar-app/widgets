@@ -1,10 +1,10 @@
 manifest_version = 1
 name = "inbox-widgets"
-version = "0.5.0"
+version = "0.6.0"
 kind = "widget"
 description = "EasyBar package updates in the native inbox."
 license = "Apache-2.0"
-minimum_easybar_version = "0.44.0"
+minimum_easybar_version = "0.45.0"
 entrypoint = "widget.lua"
 readme = "README.md"
 categories = ["inbox", "system", "utilities"]
@@ -28,3 +28,21 @@ minimum = 5
 maximum = 10080
 default = 360
 description = "Minutes between automatic widget update checks."
+
+[[settings]]
+namespace = "inbox-widgets"
+key = "source_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 40
+description = "Order of the Widgets group when the inbox is grouped by source."
+
+[[settings]]
+namespace = "inbox-widgets"
+key = "context_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 40
+description = "Order of Widgets in the inbox source context menu."

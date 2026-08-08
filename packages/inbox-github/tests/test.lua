@@ -8,13 +8,21 @@ local function load_widget(storage_values)
 end
 
 local function test_configures_the_refresh_interval()
-	local state = load_widget({ ["github-inbox:refresh_interval_minutes"] = 15 })
+	local state = load_widget({
+		["github-inbox:refresh_interval_minutes"] = 15,
+		["github-inbox:source_order"] = 17,
+		["github-inbox:context_order"] = 18,
+	})
 	local timer = assert(state.added_items.github_inbox_timer, "the GitHub inbox timer must exist")
 	assert(timer.interval == 15 * 60, "the GitHub timer must use the configured refresh interval")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the GitHub context menu must show the refresh interval"
 	)
+	state:run_next_timer()
+	assert(state.configuration.order == 18, "the GitHub context must use the configured order")
+	state:complete_next_command("github-one", 0)
+	assert(assert(state:item("thread-1")).source.order == 17, "the GitHub source must use the configured order")
 end
 
 local function test_item_refresh_stays_inline()

@@ -13,7 +13,11 @@ local SOURCE_PRESENTATION = {
 local REGISTRY_URL = "https://raw.githubusercontent.com/easybar-app/widget-registry/main/index.json"
 local STORAGE_WIDGET = "inbox-widgets"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
+local STORAGE_SOURCE_ORDER_KEY = "source_order"
+local STORAGE_CONTEXT_ORDER_KEY = "context_order"
 local DEFAULT_REFRESH_INTERVAL_MINUTES = 360
+local DEFAULT_SOURCE_ORDER = 40
+local DEFAULT_CONTEXT_ORDER = 40
 local MINIMUM_REFRESH_INTERVAL_MINUTES = 5
 local MAXIMUM_REFRESH_INTERVAL_MINUTES = 10080
 local configured_refresh_interval =
@@ -27,6 +31,18 @@ if
 then
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
 end
+local function configured_order(key, default)
+	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
+	local value = tonumber(configured)
+	if value == nil or value ~= math.floor(value) or value < -10000 or value > 10000 then
+		easybar.log(easybar.level.warn, "invalid widgets.inbox-widgets." .. key .. "; using " .. tostring(default))
+		return default
+	end
+	return value
+end
+local source_order = configured_order(STORAGE_SOURCE_ORDER_KEY, DEFAULT_SOURCE_ORDER)
+local context_order = configured_order(STORAGE_CONTEXT_ORDER_KEY, DEFAULT_CONTEXT_ORDER)
+SOURCE_PRESENTATION.order = source_order
 local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local NETWORK_READY_DELAY_SECONDS = 3
 local MIN_ACTIVITY_COMPLETION_DELAY_SECONDS = 0.2
@@ -233,6 +249,7 @@ local function configure_source_actions()
 	local operation = state.operation
 	if operation ~= nil then
 		easybar.inbox.configure(SOURCE, {
+			order = context_order,
 			actions = {
 				{
 					id = "activity",
@@ -250,6 +267,7 @@ local function configure_source_actions()
 		})
 	else
 		easybar.inbox.configure(SOURCE, {
+			order = context_order,
 			actions = {
 				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{

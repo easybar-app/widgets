@@ -1,10 +1,10 @@
 manifest_version = 1
 name = "inbox-github"
-version = "0.2.0"
+version = "0.3.0"
 kind = "widget"
 description = "GitHub notifications and pull-request actions in EasyBar's native inbox."
 license = "Apache-2.0"
-minimum_easybar_version = "0.41.0"
+minimum_easybar_version = "0.45.0"
 entrypoint = "widget.lua"
 readme = "README.md"
 categories = ["developer-tools", "inbox", "notifications"]
@@ -28,6 +28,24 @@ minimum = 5
 maximum = 10080
 default = 5
 description = "Minutes between automatic GitHub notification checks."
+
+[[settings]]
+namespace = "github-inbox"
+key = "source_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 10
+description = "Order of the GitHub group when the inbox is grouped by source."
+
+[[settings]]
+namespace = "github-inbox"
+key = "context_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 10
+description = "Order of GitHub in the inbox source context menu."
 
 [[settings]]
 namespace = "github-inbox"

@@ -7,14 +7,22 @@ local function load_widget(storage_values)
 end
 
 local function test_configures_the_refresh_interval()
-	local state = load_widget({ ["brew-inbox:refresh_interval_minutes"] = 15 })
+	local state = load_widget({
+		["brew-inbox:refresh_interval_minutes"] = 15,
+		["brew-inbox:source_order"] = 7,
+		["brew-inbox:context_order"] = 8,
+	})
 	local timer = assert(state.added_items.brew_inbox_timer, "the Homebrew inbox timer must exist")
 	assert(timer.interval == 15 * 60, "the Homebrew timer must use the configured refresh interval")
 	state:run_next_timer()
+	assert(state.configuration.order == 8, "the Homebrew context must use the configured order")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Homebrew context menu must show the refresh interval"
 	)
+	state:complete_next_command('{"scenario":"brew-one"}', 0)
+	state:run_next_timer()
+	assert(assert(state:item("formula:easybar")).source.order == 7, "the Homebrew source must use the configured order")
 end
 
 local function test_item_refresh_stays_inline()

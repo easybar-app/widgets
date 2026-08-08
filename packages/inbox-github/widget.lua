@@ -21,9 +21,13 @@ local STORAGE_WIDGET = "github-inbox"
 local STORAGE_MERGE_METHOD_KEY = "merge_method"
 local STORAGE_CONFIRM_MERGE_KEY = "confirm_merge"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
+local STORAGE_SOURCE_ORDER_KEY = "source_order"
+local STORAGE_CONTEXT_ORDER_KEY = "context_order"
 local DEFAULT_PR_MERGE_METHOD = "squash"
 local DEFAULT_CONFIRM_MERGE = false
 local DEFAULT_REFRESH_INTERVAL_MINUTES = 5
+local DEFAULT_SOURCE_ORDER = 10
+local DEFAULT_CONTEXT_ORDER = 10
 local PR_MERGE_METHOD_ORDER = { "merge", "squash", "rebase" }
 local PR_MERGE_FLAGS = {
 	merge = "--merge",
@@ -61,6 +65,18 @@ then
 	)
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
 end
+local function configured_order(key, default)
+	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
+	local value = tonumber(configured)
+	if value == nil or value ~= math.floor(value) or value < -10000 or value > 10000 then
+		easybar.log(easybar.level.warn, "invalid widgets.github-inbox." .. key .. "; using " .. tostring(default))
+		return default
+	end
+	return value
+end
+local source_order = configured_order(STORAGE_SOURCE_ORDER_KEY, DEFAULT_SOURCE_ORDER)
+local context_order = configured_order(STORAGE_CONTEXT_ORDER_KEY, DEFAULT_CONTEXT_ORDER)
+SOURCE_PRESENTATION.order = source_order
 local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local notifications = {}
 local current_error = nil
@@ -141,7 +157,7 @@ local function configure_source_actions()
 	}
 	append_merge_method_actions(actions)
 	append_merge_confirmation_actions(actions)
-	easybar.inbox.configure(SOURCE, { actions = actions })
+	easybar.inbox.configure(SOURCE, { order = context_order, actions = actions })
 end
 
 local function set_source_activity(title)

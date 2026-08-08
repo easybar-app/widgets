@@ -73,14 +73,21 @@ local function test_invalid_registry_retains_the_last_snapshot()
 end
 
 local function test_configures_the_refresh_interval()
-	local state = load_widget({ ["inbox-widgets:refresh_interval_minutes"] = 15 })
+	local state = load_widget({
+		["inbox-widgets:refresh_interval_minutes"] = 15,
+		["inbox-widgets:source_order"] = 37,
+		["inbox-widgets:context_order"] = 38,
+	})
 	local timer = assert(state.added_items.easybar_package_updates_timer, "the package update timer must exist")
 	assert(timer.interval == 15 * 60, "the timer must use the configured refresh interval")
 	state:run_next_timer()
+	assert(state.configuration.order == 38, "the Widgets context must use the configured order")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Widgets context menu must show the refresh interval"
 	)
+	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
+	assert(assert(state:item("package:brew")).source.order == 37, "the Widgets source must use the configured order")
 end
 
 test_finds_registry_updates_and_ignores_local_packages()

@@ -1,10 +1,10 @@
 manifest_version = 1
 name = "inbox-gitlab"
-version = "0.2.0"
+version = "0.3.0"
 kind = "widget"
 description = "GitLab work items and merge-request actions in EasyBar's native inbox."
 license = "Apache-2.0"
-minimum_easybar_version = "0.41.0"
+minimum_easybar_version = "0.45.0"
 entrypoint = "widget.lua"
 readme = "README.md"
 categories = ["developer-tools", "inbox", "notifications"]
@@ -29,6 +29,24 @@ minimum = 5
 maximum = 10080
 default = 5
 description = "Minutes between automatic GitLab work-item checks."
+
+[[settings]]
+namespace = "gitlab-inbox"
+key = "source_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 20
+description = "Order of the GitLab group when the inbox is grouped by source."
+
+[[settings]]
+namespace = "gitlab-inbox"
+key = "context_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 20
+description = "Order of GitLab in the inbox source context menu."
 
 [[settings]]
 namespace = "gitlab-inbox"

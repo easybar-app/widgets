@@ -8,13 +8,22 @@ local function load_widget(storage_values)
 end
 
 local function test_configures_the_refresh_interval()
-	local state = load_widget({ ["gitlab-inbox:refresh_interval_minutes"] = 15 })
+	local state = load_widget({
+		["gitlab-inbox:refresh_interval_minutes"] = 15,
+		["gitlab-inbox:source_order"] = 27,
+		["gitlab-inbox:context_order"] = 28,
+	})
 	local timer = assert(state.added_items.gitlab_inbox_timer, "the GitLab inbox timer must exist")
 	assert(timer.interval == 15 * 60, "the GitLab timer must use the configured refresh interval")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the GitLab context menu must show the refresh interval"
 	)
+	state:run_next_timer()
+	assert(state.configuration.order == 28, "the GitLab context must use the configured order")
+	state:complete_next_command("gitlab-issues", 0)
+	state:complete_next_command("gitlab-merge-requests", 0)
+	assert(assert(state:item("issue:1")).source.order == 27, "the GitLab source must use the configured order")
 end
 
 local function test_merge_method_setting_persists_and_drives_merge()

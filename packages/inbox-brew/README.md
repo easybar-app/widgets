@@ -19,6 +19,10 @@ Automatic checks run every 30 minutes by default. Set an interval from 5 minutes
 ```toml
 [widgets.brew-inbox]
 refresh_interval_minutes = 30
+source_order = 30
+context_order = 30
 ```
 
-The source context menu shows the active refresh interval.
+`source_order` controls the Homebrew group when the inbox is grouped by source.
+`context_order` independently controls its position in the inbox source menu. Lower values appear
+first. The source context menu also shows the active refresh interval.
