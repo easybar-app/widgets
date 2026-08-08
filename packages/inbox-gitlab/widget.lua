@@ -242,7 +242,6 @@ local function item_actions(work_item)
 		append_action(actions, "confirm_merge", "Confirm " .. merge_method_title(merge_method), true, false)
 		append_action(actions, "cancel_merge", "Cancel", true, false)
 	else
-		append_action(actions, "mark_read", "Mark as read", true, false)
 		if work_item.kind == "merge_request" then
 			append_action(actions, "prepare_merge", "Merge", true, false)
 		end

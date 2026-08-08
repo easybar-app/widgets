@@ -108,7 +108,7 @@ local function test_merge_confirmation_defaults_to_immediate()
 	assert(arguments["fedcba9876543210"], "GitLab immediate mode must merge the inspected head commit")
 end
 
-local function test_mark_read_stays_local()
+local function test_item_actions_do_not_duplicate_native_controls()
 	local state = load_widget()
 	state:run_next_timer()
 	assert(state:has_busy_source_action(), "GitLab startup refresh must show source activity")
@@ -120,11 +120,12 @@ local function test_mark_read_stays_local()
 	assert(item.url == "https://gitlab.com/easybar/easybar/-/issues/1", "GitLab issue must use the native URL field")
 	assert(item.timestamp == inbox.timestamp("2026-08-03T09:45:00.123+00:00"), "GitLab issue must publish updated_at")
 	assert(not state:item_has_action("issue:1", "open"), "GitLab issue must not duplicate the native Open action")
-
-	local command_count = #state.commands
-	state.action_handler({ action_id = "mark_read", target_widget_id = "issue:1" })
-	assert(#state.commands == command_count, "GitLab local mark-read must not start a refresh")
-	assert(not state:has_busy_source_action(), "GitLab local mark-read must not show source activity")
+	assert(not state:item_has_action("issue:1", "mark_read"), "GitLab issue must not duplicate the native read action")
+	assert(not state:item_has_action("issue:1", "dismiss"), "GitLab issue must not duplicate the native Dismiss action")
+	assert(
+		state:item_has_action("merge_request:2", "prepare_merge"),
+		"GitLab merge requests must retain their Merge action"
+	)
 end
 
 local function test_errors_retain_snapshot()
@@ -146,7 +147,7 @@ end
 
 test_merge_method_setting_persists_and_drives_merge()
 test_merge_confirmation_defaults_to_immediate()
-test_mark_read_stays_local()
+test_item_actions_do_not_duplicate_native_controls()
 test_errors_retain_snapshot()
 test_configures_the_refresh_interval()
 
