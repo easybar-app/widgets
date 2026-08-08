@@ -4,18 +4,18 @@ This repository contains the official installable Lua widgets and reusable Lua l
 
 ## Packages
 
-| Package | Kind | Purpose |
-| --- | --- | --- |
-| `brew` | widget | Homebrew popup and upgrade controls |
-| `caffeinate` | widget | Timed or indefinite macOS sleep prevention |
-| `github` | widget | GitHub notifications popup |
-| `gitlab` | widget | GitLab issues and merge requests popup |
-| `inbox-brew` | widget | Homebrew native-inbox publisher |
-| `inbox-github` | widget | GitHub native-inbox publisher |
-| `inbox-gitlab` | widget | GitLab native-inbox publisher |
-| `shared` | library | `text`, `retry`, and `inbox` Lua modules |
-| `tailscale` | widget | Tailscale state and exit-node controls |
-| `wireguard` | widget | Network Extension VPN controls |
+| Package        | Kind    | Purpose                                    |
+| -------------- | ------- | ------------------------------------------ |
+| `brew`         | widget  | Homebrew popup and upgrade controls        |
+| `caffeinate`   | widget  | Timed or indefinite macOS sleep prevention |
+| `github`       | widget  | GitHub notifications popup                 |
+| `gitlab`       | widget  | GitLab issues and merge requests popup     |
+| `inbox-brew`   | widget  | Homebrew native-inbox publisher            |
+| `inbox-github` | widget  | GitHub native-inbox publisher              |
+| `inbox-gitlab` | widget  | GitLab native-inbox publisher              |
+| `shared`       | library | `text`, `retry`, and `inbox` Lua modules   |
+| `tailscale`    | widget  | Tailscale state and exit-node controls     |
+| `wireguard`    | widget  | Network Extension VPN controls             |
 
 Each directory below `packages/` is an independently versioned package with a `package.toml` manifest. Widget packages declare one entrypoint. Library packages declare exported module names. Dependencies are resolved from manifests and do not implicitly activate dependency entrypoints.
 
