@@ -70,6 +70,47 @@ local function callable_noop()
 	return setmetatable({}, { __call = function() end })
 end
 
+local function installed_package(name, version, kind, source)
+	return json.object({
+		name = name,
+		version = version,
+		kind = kind,
+		entrypoint = kind == "widget" and "widget.lua" or json.null,
+		dependencies = json.object({}),
+		exports = json.object({}),
+		source = source,
+	})
+end
+
+local function registry_package(name, latest, releases)
+	local versions = json.array({})
+	for _, release in ipairs(releases) do
+		versions[#versions + 1] = json.object({
+			version = release.version,
+			archive = release.archive,
+			sha256 = string.rep("a", 64),
+		})
+	end
+	return json.object({
+		name = name,
+		latest = latest,
+		kind = name == "shared" and "library" or "widget",
+		description = name,
+		categories = json.array({}),
+		versions = versions,
+	})
+end
+
+local function widget_release(name, version)
+	return "https://github.com/easybar-app/widgets/releases/download/"
+		.. name
+		.. "-v"
+		.. version
+		.. "/"
+		.. name
+		.. ".tar.gz"
+end
+
 local function decoded_fixture(value)
 	if value == "github-one" then
 		return json.array({ json.array({ github_notification("thread-1", "Review requested", "2026-08-03T09:45:00Z") }) })
@@ -126,6 +167,35 @@ local function decoded_fixture(value)
 		return json.object({ formulae = json.array({}), casks = json.array({}) })
 	elseif value:find("brew%-malformed", 1, false) ~= nil then
 		return json.object({ formulae = json.object({}) })
+	elseif value == "widget-updates-installed" or value == "widget-updates-current" then
+		local brew_version = value == "widget-updates-current" and "0.2.0" or "0.1.0"
+		return json.object({
+			layout_version = 2,
+			packages = json.array({
+				installed_package("brew", brew_version, "widget", widget_release("brew", brew_version)),
+				installed_package("shared", "0.1.0", "library", widget_release("shared", "0.1.0")),
+				installed_package("local-tool", "0.1.0", "widget", "/tmp/local-tool"),
+			}),
+		})
+	elseif value == "widget-updates-registry" then
+		return json.object({
+			registry_version = 1,
+			packages = json.array({
+				registry_package("brew", "0.2.0", {
+					{ version = "0.1.0", archive = widget_release("brew", "0.1.0") },
+					{ version = "0.2.0", archive = widget_release("brew", "0.2.0") },
+				}),
+				registry_package("shared", "0.1.0", {
+					{ version = "0.1.0", archive = widget_release("shared", "0.1.0") },
+				}),
+				registry_package("local-tool", "9.0.0", {
+					{ version = "0.1.0", archive = widget_release("local-tool", "0.1.0") },
+					{ version = "9.0.0", archive = widget_release("local-tool", "9.0.0") },
+				}),
+			}),
+		})
+	elseif value == "widget-updates-malformed" then
+		return json.object({ registry_version = 1, packages = json.object({}) })
 	end
 
 	error("unexpected JSON fixture: " .. tostring(value))
