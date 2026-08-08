@@ -3,11 +3,11 @@
 local inbox = require("inbox")
 local retry = require("retry")
 
-local SOURCE = "EasyBar packages"
+local SOURCE = "Widgets"
 ---@type EasyBarInboxSourcePresentation
 local SOURCE_PRESENTATION = {
-	name = "EasyBar packages",
-	icon = easybar.asset("assets/updates.svg"),
+	name = "Widgets",
+	icon = easybar.asset("assets/easybar.svg"),
 	color = "#6C8EEF",
 }
 local REGISTRY_URL = "https://raw.githubusercontent.com/easybar-app/widget-registry/main/index.json"

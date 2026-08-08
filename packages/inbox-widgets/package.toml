@@ -1,6 +1,6 @@
 manifest_version = 1
-name = "inbox-widget-updates"
-version = "0.1.0"
+name = "inbox-widgets"
+version = "0.2.0"
 kind = "widget"
 description = "EasyBar package updates in the native inbox."
 license = "Apache-2.0"
@@ -11,7 +11,7 @@ categories = ["inbox", "system", "utilities"]
 
 [repository]
 url = "https://github.com/easybar-app/widgets"
-path = "packages/inbox-widget-updates"
+path = "packages/inbox-widgets"
 
 [dependencies]
 shared = "^0.1.0"

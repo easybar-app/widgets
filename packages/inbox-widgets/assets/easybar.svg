@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">EasyBar</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M396 258C396 168 338 108 256 108C160 108 98 176 98 266C98 358 166 416 260 416C318 416 366 396 400 358" stroke-width="44"/>
+    <path d="M172 258H396L256 344L172 258Z" stroke-width="22"/>
+    <path d="M256 344V414" stroke-width="22"/>
+    <path d="M190 430H322" stroke-width="22"/>
+  </g>
+</svg>

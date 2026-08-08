@@ -167,8 +167,8 @@ local function decoded_fixture(value)
 		return json.object({ formulae = json.array({}), casks = json.array({}) })
 	elseif value:find("brew%-malformed", 1, false) ~= nil then
 		return json.object({ formulae = json.object({}) })
-	elseif value == "widget-updates-installed" or value == "widget-updates-current" then
-		local brew_version = value == "widget-updates-current" and "0.2.0" or "0.1.0"
+	elseif value == "inbox-widgets-installed" or value == "inbox-widgets-current" then
+		local brew_version = value == "inbox-widgets-current" and "0.2.0" or "0.1.0"
 		return json.object({
 			layout_version = 2,
 			packages = json.array({
@@ -177,7 +177,7 @@ local function decoded_fixture(value)
 				installed_package("local-tool", "0.1.0", "widget", "/tmp/local-tool"),
 			}),
 		})
-	elseif value == "widget-updates-registry" then
+	elseif value == "inbox-widgets-registry" then
 		return json.object({
 			registry_version = 1,
 			packages = json.array({
@@ -194,7 +194,7 @@ local function decoded_fixture(value)
 				}),
 			}),
 		})
-	elseif value == "widget-updates-malformed" then
+	elseif value == "inbox-widgets-malformed" then
 		return json.object({ registry_version = 1, packages = json.object({}) })
 	end
 
