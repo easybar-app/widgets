@@ -34,3 +34,23 @@ make check EASYBAR_ROOT=/path/to/easybar
 ```
 
 The metadata validator checks package identity, versions, compatibility, entrypoints, exported modules, dependency cycles, repository paths, and static asset references.
+
+## Releases
+
+Packages are released independently from this monorepo. Create and push a tag named
+`<package>-v<version>`, where the version matches that package's `package.toml`:
+
+```sh
+git tag caffeinate-v0.1.0
+git push origin caffeinate-v0.1.0
+```
+
+The release workflow runs the full package test suite, creates the deterministic
+`caffeinate-0.1.0.tar.gz` archive, uploads its SHA-256 checksum, and prints the exact registry
+metadata in the workflow summary. Released archives contain `package.toml` at their root.
+
+Build the same archive locally with:
+
+```sh
+make package PACKAGE=caffeinate OUTPUT_DIR=dist
+```
