@@ -1,0 +1,20 @@
+manifest_version = 1
+name = "github"
+version = "0.1.0"
+kind = "widget"
+description = "GitHub notifications in a standalone popup."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "notifications"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/github"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["gh"]

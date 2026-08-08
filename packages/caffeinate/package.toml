@@ -1,0 +1,25 @@
+manifest_version = 1
+name = "caffeinate"
+version = "0.1.0"
+kind = "widget"
+description = "Keep macOS awake indefinitely or for a selected duration."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["system", "utilities"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/caffeinate"
+
+[requirements]
+commands = ["/usr/bin/caffeinate"]
+
+[[settings]]
+namespace = "caffeinate"
+key = "duration_minutes"
+type = "integer"
+minimum = 1
+maximum = 1439
+description = "Default left-click duration; omit for an indefinite session."

@@ -1,0 +1,34 @@
+manifest_version = 1
+name = "inbox-github"
+version = "0.1.0"
+kind = "widget"
+description = "GitHub notifications and pull-request actions in EasyBar's native inbox."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "inbox", "notifications"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/inbox-github"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["gh"]
+native_inbox = true
+
+[[settings]]
+namespace = "github-inbox"
+key = "merge_method"
+type = "string"
+allowed = ["merge", "squash", "rebase"]
+default = "squash"
+
+[[settings]]
+namespace = "github-inbox"
+key = "confirm_merge"
+type = "boolean"
+default = false

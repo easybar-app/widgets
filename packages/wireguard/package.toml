@@ -1,0 +1,27 @@
+manifest_version = 1
+name = "wireguard"
+version = "0.1.0"
+kind = "widget"
+description = "Control a macOS Network Extension VPN service with scutil."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["network", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/wireguard"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["scutil"]
+
+[[settings]]
+namespace = "wireguard"
+key = "vpn_name"
+type = "string"
+default = "WireGuard"
+description = "Exact Network Extension service name reported by scutil --nc list."

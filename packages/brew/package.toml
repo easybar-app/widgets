@@ -1,0 +1,23 @@
+manifest_version = 1
+name = "brew"
+version = "0.1.0"
+kind = "widget"
+description = "Homebrew updates and upgrades in a standalone popup."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/brew"
+
+[dependencies]
+shared = "^0.1.0"
+
+[exports]
+"brew.policy" = "policy.lua"
+
+[requirements]
+commands = ["brew"]

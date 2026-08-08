@@ -1,0 +1,21 @@
+manifest_version = 1
+name = "tailscale"
+version = "0.1.0"
+kind = "widget"
+description = "Tailscale status, connection controls, and exit-node selection."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["network", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/tailscale"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["tailscale"]
+optional_environment = ["TAILSCALE"]

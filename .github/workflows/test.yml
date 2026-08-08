@@ -1,0 +1,30 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - name: Checkout widgets
+        uses: actions/checkout@v7
+
+      - name: Checkout EasyBar
+        uses: actions/checkout@v7
+        with:
+          repository: easybar-app/easybar
+          path: easybar-source
+
+      - name: Install Lua
+        run: easybar-source/scripts/ci/install-dependencies.sh lua
+
+      - name: Validate packages and run tests
+        run: make check EASYBAR_ROOT=easybar-source

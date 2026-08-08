@@ -1,0 +1,18 @@
+manifest_version = 1
+name = "shared"
+version = "0.1.0"
+kind = "library"
+description = "Shared text, retry, and native-inbox helpers for official EasyBar widgets."
+license = "Apache-2.0"
+minimum_easybar_version = "0.41.0"
+readme = "README.md"
+categories = ["library"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/shared"
+
+[exports]
+inbox = "inbox.lua"
+retry = "retry.lua"
+text = "text.lua"
