@@ -1,4 +1,4 @@
-name: Sync package docs
+name: Trigger documentation build
 
 on:
   push:
@@ -6,39 +6,31 @@ on:
       - main
     paths:
       - "packages/**"
+      - ".github/workflows/sync-docs.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sync-package-docs
+  group: trigger-documentation-build
   cancel-in-progress: true
 
 jobs:
-  dispatch:
+  trigger:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Require EasyBar docs token
+      - name: Require Cloudflare deploy hook
         env:
-          EASYBAR_DOCS_TOKEN: ${{ secrets.EASYBAR_DOCS_TOKEN }}
+          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DOCS_DEPLOY_HOOK }}
         run: |
-          if [[ -z "${EASYBAR_DOCS_TOKEN}" ]]; then
-            echo "::error::Add EASYBAR_DOCS_TOKEN with Contents: write access to easybar-app/easybar."
+          if [[ -z "${DEPLOY_HOOK}" ]]; then
+            echo "::error::Add the CLOUDFLARE_DOCS_DEPLOY_HOOK repository secret."
             exit 1
           fi
 
-      - name: Trigger package catalog sync
-        uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.EASYBAR_DOCS_TOKEN }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: "easybar-app",
-              repo: "easybar",
-              event_type: "widgets-packages-updated",
-              client_payload: {
-                widgets_sha: context.sha,
-              },
-            });
+      - name: Trigger easybar.dev rebuild
+        env:
+          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DOCS_DEPLOY_HOOK }}
+        run: curl --fail-with-body --request POST "${DEPLOY_HOOK}"
