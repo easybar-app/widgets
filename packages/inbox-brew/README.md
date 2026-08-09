@@ -25,4 +25,4 @@ context_order = 30
 
 `source_order` controls the Homebrew group when the inbox is grouped by source.
 `context_order` independently controls its position in the inbox source menu. Lower values appear
-first. The source context menu also shows the active refresh interval.
+first. The source context menu shows the active refresh interval under **Settings**.

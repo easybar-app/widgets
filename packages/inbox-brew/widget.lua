@@ -302,9 +302,15 @@ local function configure_source_actions()
 		}
 	end
 	actions[#actions + 1] = {
-		id = "refresh_interval",
-		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
-		enabled = false,
+		id = "settings",
+		title = "Settings",
+		children = {
+			{
+				id = "refresh_interval",
+				title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+				enabled = false,
+			},
+		},
 	}
 	easybar.inbox.configure(SOURCE, {
 		order = context_order,

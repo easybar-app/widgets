@@ -20,6 +20,7 @@ local function test_configures_the_refresh_interval()
 		"Homebrew refresh activity must retain its source icon"
 	)
 	assert(state.configuration.order == 8, "the Homebrew context must use the configured order")
+	assert(assert(state:source_action("settings")).children ~= nil, "Homebrew settings must use a submenu")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Homebrew context menu must show the refresh interval"
