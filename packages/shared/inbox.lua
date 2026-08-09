@@ -29,10 +29,12 @@ function M.decode_array(json_module, output)
 	return value
 end
 
+--- Reports whether a Gregorian calendar year contains a leap day.
 local function is_leap_year(year)
 	return year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0)
 end
 
+--- Returns the number of days in a Gregorian calendar month.
 local function days_in_month(year, month)
 	local lengths = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 	if month == 2 and is_leap_year(year) then
@@ -42,6 +44,7 @@ local function days_in_month(year, month)
 end
 
 -- Gregorian calendar date to days since 1970-01-01, independent of the local timezone.
+--- Converts a civil date to its day offset from the Unix epoch.
 local function days_from_civil(year, month, day)
 	year = year - (month <= 2 and 1 or 0)
 	local era = math.floor(year / 400)
@@ -52,6 +55,7 @@ local function days_from_civil(year, month, day)
 	return era * 146097 + day_of_era - 719468
 end
 
+--- Parses an ISO 8601 timezone suffix into an offset in seconds.
 local function timezone_offset(rest)
 	if rest == "Z" or rest == "z" then
 		return 0

@@ -4,6 +4,7 @@ local widget_path = root .. "/packages/caffeinate/widget.lua"
 local host = assert(loadfile(root .. "/tests/support/widget_host.lua"))()
 host.configure(root, easybar_root)
 
+--- Loads the widget with an optional persisted duration and returns its test state.
 local function load_widget(duration_minutes)
 	local storage = {}
 	if duration_minutes ~= nil then
@@ -22,6 +23,7 @@ local function load_widget(duration_minutes)
 	return easybar, state
 end
 
+--- Simulates a primary click on the caffeinate bar item.
 local function click_left(easybar, state)
 	state:emit("caffeinate", easybar.events.mouse.clicked, {
 		button = easybar.events.mouse.left_button,

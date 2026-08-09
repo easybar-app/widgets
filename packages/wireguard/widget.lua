@@ -43,6 +43,7 @@ local state = {
 
 local toggle_running = false
 
+--- Returns the human-readable WireGuard connection status label.
 local function status_label(connected)
 	if connected then
 		return "Active"
@@ -51,6 +52,7 @@ local function status_label(connected)
 	return "Inactive"
 end
 
+--- Logs a completed WireGuard command at a severity matching its result.
 local function log_command_result(action, command, output, ok, code)
 	output = text.trim(output or "")
 
@@ -72,6 +74,7 @@ local function log_command_result(action, command, output, ok, code)
 	)
 end
 
+--- Formats command arguments for diagnostic log messages.
 local function command_label(arguments)
 	local values = {}
 	for index, argument in ipairs(arguments) do
@@ -80,6 +83,7 @@ local function command_label(arguments)
 	return table.concat(values, " ")
 end
 
+--- Runs a WireGuard helper command and reports its normalized result.
 local function run_command(arguments, options, callback)
 	easybar.spawn_async(arguments, options or COMMAND_OPTIONS, function(output, code)
 		output = text.trim(output or "")
@@ -88,6 +92,7 @@ local function run_command(arguments, options, callback)
 	end)
 end
 
+--- Reads the configured VPN service status without blocking EasyBar.
 local function current_status_async(vpn_name, callback)
 	local arguments = { "scutil", "--nc", "status", vpn_name }
 
@@ -102,6 +107,7 @@ local function current_status_async(vpn_name, callback)
 	end)
 end
 
+--- Applies a network-change event when it belongs to the configured VPN service.
 local function apply_network_event(event)
 	if event == nil or event.network == nil then
 		return
@@ -119,6 +125,7 @@ local function apply_network_event(event)
 	end
 end
 
+--- Refreshes the rendered connection state from the system VPN configuration.
 local function refresh()
 	local wireguard_connected = state.wireguard_connected
 	local icon_color = wireguard_connected and COLORS.success or COLORS.muted
@@ -142,11 +149,13 @@ local function refresh()
 	})
 end
 
+--- Clears the active toggle operation and refreshes connection status.
 local function finish_toggle()
 	toggle_running = false
 	refresh()
 end
 
+--- Connects or disconnects the configured WireGuard VPN service.
 local function toggle_wireguard()
 	if toggle_running then
 		easybar.log(easybar.level.debug, "wireguard toggle skipped", "already running")

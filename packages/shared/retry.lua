@@ -99,6 +99,7 @@ function M.is_transient_network_error(output, code)
 	return false
 end
 
+--- Reads a command duration from callback metadata and normalizes it to milliseconds.
 local function duration_ms(metadata)
 	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
 	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
@@ -152,6 +153,7 @@ function M.run(easybar_api, options)
 	local operation = {}
 	local run_attempt
 
+	--- Delivers the final retry result exactly once.
 	local function complete(output, code)
 		if state.cancelled or state.completed then
 			return
@@ -165,6 +167,7 @@ function M.run(easybar_api, options)
 		})
 	end
 
+	--- Starts the next retry attempt unless the operation has already ended.
 	run_attempt = function()
 		if state.cancelled or state.completed then
 			return
@@ -219,6 +222,7 @@ function M.run(easybar_api, options)
 		state.active_token = token_or_error
 	end
 
+	--- Cancels pending retry work and the active asynchronous command.
 	function operation:cancel()
 		if state.cancelled or state.completed then
 			return false
@@ -239,6 +243,7 @@ function M.run(easybar_api, options)
 		return true
 	end
 
+	--- Reports whether the retry operation can still run or complete.
 	function operation:is_active()
 		return not state.cancelled and not state.completed
 	end

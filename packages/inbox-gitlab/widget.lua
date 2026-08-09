@@ -66,6 +66,7 @@ then
 	)
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
 end
+--- Reads and validates a configured inbox source or context-menu order.
 local function configured_order(key, default)
 	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
 	local value = tonumber(configured)
@@ -103,10 +104,12 @@ if merge_confirmation_required ~= configured_confirm_merge then
 	)
 end
 
+--- Returns the display label for a merge-request merge method.
 local function merge_method_title(method)
 	return MERGE_METHOD_TITLES[method] or tostring(method)
 end
 
+--- Builds the source action used to select a merge-request merge method.
 local function merge_method_action()
 	local children = {}
 	for _, method in ipairs(MERGE_METHOD_ORDER) do
@@ -118,6 +121,7 @@ local function merge_method_action()
 	return { id = "merge_method", title = "Merge method", children = children }
 end
 
+--- Builds the source action used to configure merge confirmation behavior.
 local function merge_confirmation_action()
 	return {
 		id = "merge_confirmation",
@@ -135,6 +139,7 @@ local function merge_confirmation_action()
 	}
 end
 
+--- Publishes GitLab source actions for the current activity and settings.
 local function configure_source_actions()
 	local actions
 	if source_activity ~= nil then
@@ -164,6 +169,7 @@ local function configure_source_actions()
 	})
 end
 
+--- Updates the source-level busy label and republishes its actions.
 local function set_source_activity(title)
 	source_activity = title
 	configure_source_actions()
@@ -171,10 +177,12 @@ end
 
 configure_source_actions()
 
+--- Fetches all pages from a GitLab API endpoint with retry handling.
 local function fetch(endpoint, operation, complete)
 	local current_attempt = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
+		--- Starts one paginated GitLab API request for the retry controller.
 		attempt = function(done, attempt_number)
 			current_attempt = attempt_number
 			log(
@@ -196,6 +204,7 @@ local function fetch(endpoint, operation, complete)
 				log_operation = operation,
 			}, done)
 		end,
+		--- Reports whether a failed request should be retried as a transient network error.
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
@@ -217,6 +226,7 @@ local function fetch(endpoint, operation, complete)
 	})
 end
 
+--- Appends a normalized native inbox action to an action list.
 local function append_action(actions, id, title, enabled, busy)
 	actions[#actions + 1] = {
 		id = id,
@@ -226,6 +236,7 @@ local function append_action(actions, id, title, enabled, busy)
 	}
 end
 
+--- Builds non-native actions for a GitLab work item's current state.
 local function item_actions(work_item)
 	local actions = {}
 	local item_id = work_item.id
@@ -248,6 +259,7 @@ local function item_actions(work_item)
 	return actions
 end
 
+--- Publishes the retained GitLab work-item snapshot and current error.
 local function publish()
 	local work_items = {}
 	for _, pair in ipairs({ { "issue", issues }, { "merge_request", merge_requests } }) do
@@ -317,6 +329,7 @@ local function publish()
 	return #items
 end
 
+--- Publishes a GitLab error without discarding the last valid snapshot.
 local function publish_error(output, fallback, title)
 	current_error = {
 		title = title or "GitLab work items unavailable",
@@ -326,6 +339,7 @@ local function publish_error(output, fallback, title)
 	publish()
 end
 
+--- Validates fields required to render and act on a GitLab work item.
 local function valid_work_item(item, kind)
 	if type(item) ~= "table" then
 		return false
@@ -364,6 +378,7 @@ local function valid_work_item(item, kind)
 	return inbox.timestamp(item.updated_at) ~= nil
 end
 
+--- Decodes and validates paginated GitLab work-item output.
 local function decode_work_items(output, kind)
 	local decoded = inbox.decode_array(easybar.json, output)
 	if decoded == nil then
@@ -377,6 +392,7 @@ local function decode_work_items(output, kind)
 	return decoded
 end
 
+--- Finalizes a failed GitLab operation and publishes its retained snapshot.
 local function finish_error(operation, output, fallback, attempts, code)
 	refreshing = false
 	set_source_activity(nil)
@@ -395,6 +411,7 @@ end
 
 local refresh
 
+--- Starts a queued refresh after the active GitLab refresh completes.
 local function run_queued_refresh()
 	if refresh_queued then
 		refresh_queued = false
@@ -402,6 +419,7 @@ local function run_queued_refresh()
 	end
 end
 
+--- Queues or starts a GitLab issues and merge-request refresh.
 refresh = function(reason)
 	reason = tostring(reason or "unspecified")
 	if refreshing then
@@ -493,6 +511,7 @@ refresh = function(reason)
 	end)
 end
 
+--- Replaces any pending delayed refresh with a newly scheduled request.
 local function schedule_refresh(reason, delay_seconds)
 	reason = tostring(reason or "unspecified")
 	delay_seconds = tonumber(delay_seconds) or 0
@@ -509,6 +528,7 @@ local function schedule_refresh(reason, delay_seconds)
 	end)
 end
 
+--- Finds the retained merge request for an inbox item identifier.
 local function merge_request_for_item_id(item_id)
 	local global_id = item_id:match("^merge_request:(.+)$")
 	if global_id == nil then
@@ -522,6 +542,7 @@ local function merge_request_for_item_id(item_id)
 	return nil
 end
 
+--- Extracts the project and merge-request identifiers needed by `glab`.
 local function merge_request_target(merge_request)
 	if merge_request == nil then
 		return nil
@@ -541,6 +562,7 @@ local function merge_request_target(merge_request)
 	}
 end
 
+--- Decodes merge-relevant fields returned by the GitLab API.
 local function decode_merge_request_state(output)
 	local ok, payload = pcall(easybar.json.decode, tostring(output or ""))
 	if not ok or type(payload) ~= "table" or easybar.json.is_array(payload) then
@@ -599,6 +621,7 @@ local MERGE_BLOCK_REASONS = {
 	unchecked = "GitLab has not checked whether the merge request can be merged yet.",
 }
 
+--- Returns the reason a merge request cannot be merged, if any.
 local function merge_block_reason(merge_request)
 	if merge_request.state ~= "opened" then
 		return "The merge request is no longer open."
@@ -615,6 +638,7 @@ end
 
 local confirm_merge
 
+--- Validates a merge request and either requests confirmation or merges it.
 local function prepare_merge(item_id)
 	if item_id == "" or busy_item_actions[item_id] ~= nil then
 		return
@@ -691,6 +715,7 @@ local function prepare_merge(item_id)
 	end)
 end
 
+--- Removes a merged request from the retained inbox snapshot.
 local function remove_merge_request(item_id)
 	local global_id = item_id:match("^merge_request:(.+)$")
 	if global_id == nil then
@@ -704,6 +729,7 @@ local function remove_merge_request(item_id)
 	end
 end
 
+--- Executes the configured merge method for a prepared merge request.
 confirm_merge = function(item_id)
 	local confirmation = merge_confirmations[item_id]
 	if confirmation == nil or busy_item_actions[item_id] ~= nil then
@@ -772,6 +798,7 @@ confirm_merge = function(item_id)
 	end)
 end
 
+--- Persists whether merge requests require explicit confirmation.
 local function set_merge_confirmation_required(required)
 	if type(required) ~= "boolean" then
 		log(easybar.level.warn, "unsupported merge confirmation selection=" .. tostring(required))
@@ -806,6 +833,7 @@ local function set_merge_confirmation_required(required)
 	publish()
 end
 
+--- Validates and persists the selected merge-request merge method.
 local function set_merge_method(method)
 	if MERGE_METHOD_FLAGS[method] == nil then
 		log(easybar.level.warn, "unsupported merge method selection=" .. tostring(method))
@@ -873,6 +901,7 @@ end)
 local timer = easybar.add(easybar.kind.item, "gitlab_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
+	--- Schedules the periodic GitLab work-item refresh.
 	on_interval = function()
 		refresh("interval")
 	end,

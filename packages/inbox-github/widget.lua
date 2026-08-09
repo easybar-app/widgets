@@ -65,6 +65,7 @@ then
 	)
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
 end
+--- Reads and validates a configured inbox source or context-menu order.
 local function configured_order(key, default)
 	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
 	local value = tonumber(configured)
@@ -101,10 +102,12 @@ if merge_confirmation_required ~= configured_confirm_merge then
 	)
 end
 
+--- Returns the display label for a pull-request merge method.
 local function merge_method_title(method)
 	return PR_MERGE_METHOD_TITLES[method] or tostring(method)
 end
 
+--- Builds the source action used to select a pull-request merge method.
 local function merge_method_action()
 	local children = {}
 	for _, method in ipairs(PR_MERGE_METHOD_ORDER) do
@@ -116,6 +119,7 @@ local function merge_method_action()
 	return { id = "merge_method", title = "Merge method", children = children }
 end
 
+--- Builds the source action used to configure merge confirmation behavior.
 local function merge_confirmation_action()
 	return {
 		id = "merge_confirmation",
@@ -133,6 +137,7 @@ local function merge_confirmation_action()
 	}
 end
 
+--- Publishes GitHub source actions for the current activity and settings.
 local function configure_source_actions()
 	local actions
 	if source_activity ~= nil then
@@ -162,6 +167,7 @@ local function configure_source_actions()
 	})
 end
 
+--- Updates the source-level busy label and republishes its actions.
 local function set_source_activity(title)
 	source_activity = title
 	configure_source_actions()
@@ -169,6 +175,7 @@ end
 
 configure_source_actions()
 
+--- Resolves a browser URL for a GitHub notification subject.
 local function notification_url(notification)
 	local repository = type(notification.repository.html_url) == "string" and text.trim(notification.repository.html_url)
 		or ""
@@ -187,6 +194,7 @@ local function notification_url(notification)
 	return "https://github.com/notifications"
 end
 
+--- Appends a normalized native inbox action to an action list.
 local function append_action(actions, id, title, enabled, busy)
 	actions[#actions + 1] = {
 		id = id,
@@ -196,6 +204,7 @@ local function append_action(actions, id, title, enabled, busy)
 	}
 end
 
+--- Builds non-native actions for a GitHub notification's current state.
 local function item_actions(notification, item_id)
 	local actions = {}
 	local busy_action = busy_item_actions[item_id]
@@ -219,6 +228,7 @@ local function item_actions(notification, item_id)
 	return actions
 end
 
+--- Publishes the retained GitHub notification snapshot and current error.
 local function publish_current_notifications()
 	local items = {}
 	if current_error ~= nil then
@@ -262,6 +272,7 @@ local function publish_current_notifications()
 	return #notifications
 end
 
+--- Publishes a GitHub error without discarding the last valid snapshot.
 local function publish_error(output, fallback, title)
 	current_error = {
 		title = title or "GitHub notifications unavailable",
@@ -271,6 +282,7 @@ local function publish_error(output, fallback, title)
 	publish_current_notifications()
 end
 
+--- Validates fields required to render and act on a GitHub notification.
 local function valid_notification(notification)
 	if type(notification) ~= "table" then
 		return false
@@ -316,6 +328,7 @@ local function valid_notification(notification)
 	return inbox.timestamp(notification.updated_at) ~= nil
 end
 
+--- Decodes and validates paginated GitHub notification output.
 local function decode_notifications(output)
 	local pages = inbox.decode_array(easybar.json, output)
 	if pages == nil then
@@ -339,6 +352,7 @@ local function decode_notifications(output)
 	return decoded
 end
 
+--- Replaces the retained notification state from valid GitHub output.
 local function publish_notifications(output)
 	local decoded = decode_notifications(output)
 	if decoded == nil then
@@ -355,6 +369,7 @@ end
 
 local refresh
 
+--- Merges one refresh reason and activity target into a coalesced request.
 local function merge_refresh_request(request, reason, activity_item_id)
 	request = request or { reasons = {}, activity_item_ids = {}, show_source_activity = false }
 	request.reasons[#request.reasons + 1] = tostring(reason or "unspecified")
@@ -366,6 +381,7 @@ local function merge_refresh_request(request, reason, activity_item_id)
 	return request
 end
 
+--- Starts a GitHub notification refresh for a coalesced request.
 local function start_refresh(request)
 	if pending_refresh ~= nil then
 		pending_refresh:cancel()
@@ -382,6 +398,7 @@ local function start_refresh(request)
 	local current_attempt = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
+		--- Starts one paginated GitHub notification request for the retry controller.
 		attempt = function(done, attempt_number)
 			current_attempt = attempt_number
 			log(
@@ -398,6 +415,7 @@ local function start_refresh(request)
 				"notifications?all=false&per_page=100",
 			}, { timeout_seconds = 20, max_output_bytes = 1048576, log_operation = "refresh" }, done)
 		end,
+		--- Reports whether a failed refresh should be retried as a transient network error.
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
@@ -413,6 +431,7 @@ local function start_refresh(request)
 			end
 			return retryable
 		end,
+		--- Publishes the final refresh result and starts any coalesced follow-up request.
 		on_complete = function(output, code, attempts, metadata)
 			active_refresh = nil
 			if request.show_source_activity then
@@ -455,6 +474,7 @@ local function start_refresh(request)
 	})
 end
 
+--- Queues or starts a GitHub notification refresh.
 refresh = function(reason, activity_item_id)
 	reason = tostring(reason or "unspecified")
 	if active_refresh ~= nil then
@@ -465,6 +485,7 @@ refresh = function(reason, activity_item_id)
 	start_refresh(merge_refresh_request(nil, reason, activity_item_id))
 end
 
+--- Replaces any pending delayed refresh with a newly scheduled request.
 local function schedule_refresh(reason, delay_seconds)
 	reason = tostring(reason or "unspecified")
 	delay_seconds = tonumber(delay_seconds) or 0
@@ -481,6 +502,7 @@ local function schedule_refresh(reason, delay_seconds)
 	end)
 end
 
+--- Finds the retained GitHub notification for an inbox item identifier.
 local function notification_for_id(item_id)
 	for _, notification in ipairs(notifications) do
 		if tostring(notification.id) == item_id then
@@ -490,6 +512,7 @@ local function notification_for_id(item_id)
 	return nil
 end
 
+--- Extracts the repository and pull-request number from a notification.
 local function pull_request_target(notification)
 	if notification == nil or notification.subject.type ~= "PullRequest" then
 		return nil, nil
@@ -505,6 +528,7 @@ local function pull_request_target(notification)
 	return repository, number
 end
 
+--- Decodes the merge-relevant fields returned by `gh pr view`.
 local function decode_pull_request_state(output)
 	local ok, payload = pcall(easybar.json.decode, tostring(output or ""))
 	if not ok or type(payload) ~= "table" or easybar.json.is_array(payload) then
@@ -546,6 +570,7 @@ local function decode_pull_request_state(output)
 		nil
 end
 
+--- Returns the reason a pull request cannot be merged, if any.
 local function merge_block_reason(pull_request)
 	if pull_request.state ~= "OPEN" then
 		return "The pull request is no longer open."
@@ -584,6 +609,7 @@ end
 
 local confirm_merge
 
+--- Validates a pull request and either requests confirmation or merges it.
 local function prepare_merge(item_id)
 	if item_id == "" or busy_item_actions[item_id] ~= nil then
 		return
@@ -661,6 +687,7 @@ local function prepare_merge(item_id)
 	end)
 end
 
+--- Clears merge activity and refreshes notifications after a successful merge.
 local function refresh_after_merge(item_id)
 	easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. item_id }, {
 		timeout_seconds = 20,
@@ -676,6 +703,7 @@ local function refresh_after_merge(item_id)
 	end)
 end
 
+--- Executes the configured merge method for a prepared pull request.
 confirm_merge = function(item_id)
 	local confirmation = merge_confirmations[item_id]
 	if confirmation == nil or busy_item_actions[item_id] ~= nil then
@@ -738,6 +766,7 @@ confirm_merge = function(item_id)
 	end)
 end
 
+--- Persists whether pull-request merges require explicit confirmation.
 local function set_merge_confirmation_required(required)
 	if type(required) ~= "boolean" then
 		log(easybar.level.warn, "unsupported merge confirmation selection=" .. tostring(required))
@@ -772,6 +801,7 @@ local function set_merge_confirmation_required(required)
 	publish_current_notifications()
 end
 
+--- Validates and persists the selected pull-request merge method.
 local function set_merge_method(method)
 	if PR_MERGE_FLAGS[method] == nil then
 		log(easybar.level.warn, "unsupported merge method selection=" .. tostring(method))
@@ -801,6 +831,7 @@ local function set_merge_method(method)
 	publish_current_notifications()
 end
 
+--- Marks a GitHub notification as read remotely and refreshes local state.
 local function mark_notification_read(item_id)
 	if item_id == "" or busy_item_actions[item_id] ~= nil or notification_for_id(item_id) == nil then
 		return
@@ -865,6 +896,7 @@ end)
 local timer = easybar.add(easybar.kind.item, "github_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
+	--- Schedules the periodic GitHub notification refresh.
 	on_interval = function()
 		refresh("interval")
 	end,

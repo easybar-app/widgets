@@ -2,6 +2,7 @@ local root = assert(arg[1], "repository root argument is required")
 local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
+--- Loads the widget with controlled storage values and returns its test state.
 local function load_widget(storage_values)
 	storage_values = storage_values or {}
 	if storage_values["brew-inbox:automatic_updates"] == nil then
@@ -10,10 +11,12 @@ local function load_widget(storage_values)
 	return host.load(root, easybar_root, "inbox-brew", storage_values)
 end
 
+--- Loads the widget using its default persisted settings.
 local function load_widget_with_defaults()
 	return host.load(root, easybar_root, "inbox-brew")
 end
 
+--- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
 		["brew-inbox:refresh_interval_minutes"] = 15,
@@ -46,6 +49,7 @@ local function test_configures_the_refresh_interval()
 	assert(not state:item_has_action(item.id, "dismiss"), "Homebrew must not duplicate the native Dismiss action")
 end
 
+--- Verifies that automatic updates default on and respect upgrade policy.
 local function test_automatic_updates_default_on_and_upgrade_eligible_packages()
 	local state = load_widget_with_defaults()
 	state:run_next_timer()
@@ -69,6 +73,7 @@ local function test_automatic_updates_default_on_and_upgrade_eligible_packages()
 	)
 end
 
+--- Verifies that enabling automatic updates persists and starts an update cycle.
 local function test_automatic_updates_toggle_persists_and_starts_a_cycle()
 	local state = load_widget({ ["brew-inbox:automatic_updates"] = false })
 	state:run_next_timer()
@@ -87,6 +92,7 @@ local function test_automatic_updates_toggle_persists_and_starts_a_cycle()
 	assert(table.concat(state.commands[1].command, " ") == "brew update", "enabling automatic updates must start a cycle")
 end
 
+--- Verifies that item-triggered refresh activity remains on that inbox item.
 local function test_item_refresh_stays_inline()
 	local state = load_widget()
 	state:run_next_timer()
@@ -110,6 +116,7 @@ local function test_item_refresh_stays_inline()
 	assert(not state:has_busy_source_action(), "Homebrew item completion must remain source-idle")
 end
 
+--- Verifies mixed warning output is parsed without discarding the last valid snapshot.
 local function test_parser_retains_snapshot_and_handles_warning_braces()
 	local state = load_widget()
 	state:run_next_timer()
@@ -131,6 +138,7 @@ local function test_parser_retains_snapshot_and_handles_warning_braces()
 	assert(state:item("error") == nil, "a valid Homebrew snapshot must clear the prior error")
 end
 
+--- Verifies that cancelling a refresh clears its busy state.
 local function test_refresh_cancellation_clears_activity()
 	local state = load_widget()
 	state:run_next_timer()
@@ -141,6 +149,7 @@ local function test_refresh_cancellation_clears_activity()
 	assert(not state:has_busy_source_action(), "Homebrew cancellation must clear source activity")
 end
 
+--- Verifies that cancelling a mutation refreshes the retained package snapshot.
 local function test_mutation_cancellation_reconciles_snapshot()
 	local state = load_widget()
 	state:run_next_timer()

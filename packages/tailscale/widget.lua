@@ -56,10 +56,12 @@ local refresh_pending = false
 -- Prevents double-clicks from starting overlapping up/down or exit-node commands.
 local action_running = false
 
+--- Builds a command argument list for the configured Tailscale binary.
 local function tailscale_arguments(...)
 	return { TAILSCALE, ... }
 end
 
+--- Formats command arguments for diagnostic log messages.
 local function command_label(arguments)
 	local values = {}
 	for index, argument in ipairs(arguments) do
@@ -78,6 +80,7 @@ local function run_command(arguments, options, callback)
 	end)
 end
 
+--- Logs a completed Tailscale command at a severity matching its result.
 local function log_command_result(action, command, output, ok, code)
 	if ok then
 		if output ~= "" then
@@ -107,10 +110,12 @@ local function decode_json(output)
 	return nil, value
 end
 
+--- Returns the human-readable connection status label.
 local function status_label(connected)
 	return connected and "Active" or "Inactive"
 end
 
+--- Returns the first non-empty health warning from a Tailscale status response.
 local function first_health_message(status)
 	local health = status.Health
 	if type(health) ~= "table" then
@@ -184,6 +189,7 @@ local function exit_nodes_from_status(status, active_id)
 	return nodes
 end
 
+--- Creates a disconnected snapshot that explains why status is unavailable.
 local function unavailable_snapshot(detail)
 	return {
 		available = false,
@@ -295,6 +301,7 @@ local function update_state(snapshot)
 	return snapshot
 end
 
+--- Selects the template icon that represents the current connection state.
 local function current_icon_name(snapshot)
 	if not snapshot.tailscale_connected then
 		return "tailscale-inactive.svg"
@@ -307,6 +314,7 @@ local function current_icon_name(snapshot)
 	return "tailscale-active.svg"
 end
 
+--- Builds context-menu actions for connection and exit-node management.
 local function context_menu(snapshot)
 	local exit_nodes = {
 		{
@@ -346,6 +354,7 @@ local function context_menu(snapshot)
 	}
 end
 
+--- Renders the widget from a normalized Tailscale status snapshot.
 local function render(snapshot)
 	local status_color = snapshot.tailscale_connected and COLORS.success or COLORS.muted
 	local exit_node_color = snapshot.exit_node_enabled and COLORS.text or COLORS.muted
@@ -382,6 +391,7 @@ local function render(snapshot)
 	})
 end
 
+--- Renders a temporary busy state while an action is running.
 local function render_working(message)
 	if popup_label == nil then
 		return
@@ -415,6 +425,7 @@ refresh = function()
 	end)
 end
 
+--- Clears the active action and refreshes Tailscale status.
 local function finish_action()
 	action_running = false
 	refresh()
@@ -505,6 +516,7 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 		padding_y = 8,
 		spacing = 6,
 	},
+	--- Refreshes Tailscale status on the widget's periodic interval.
 	on_interval = function()
 		refresh()
 	end,

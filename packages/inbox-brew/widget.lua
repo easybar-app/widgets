@@ -48,6 +48,7 @@ if automatic_updates ~= configured_automatic_updates then
 		"invalid widgets.brew-inbox.automatic_updates; using " .. tostring(DEFAULT_AUTOMATIC_UPDATES)
 	)
 end
+--- Reads and validates a configured inbox source or context-menu order.
 local function configured_order(key, default)
 	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
 	local value = tonumber(configured)
@@ -85,6 +86,7 @@ local run_automatic_update_cycle
 local run_upgrade_all
 local log = easybar.log
 
+--- Finds the closing brace of a JSON object embedded in command output.
 local function json_object_end(raw, start_index)
 	local depth = 0
 	local in_string = false
@@ -113,6 +115,7 @@ local function json_object_end(raw, start_index)
 	return nil
 end
 
+--- Derives a concise formula or cask source label from a Homebrew warning.
 local function warning_source(raw)
 	local owner, tap, token = tostring(raw or ""):match("/Taps/([^/]+)/homebrew%-([^/]+)/Casks/([^/]+)%.rb:%d+")
 	if owner == nil then
@@ -124,6 +127,7 @@ local function warning_source(raw)
 	return token .. " · " .. owner .. "/" .. tap
 end
 
+--- Converts non-JSON Homebrew output into an inbox warning item.
 local function parse_warning(raw)
 	raw = text.trim(raw)
 	if raw == "" then
@@ -136,6 +140,7 @@ local function parse_warning(raw)
 	}
 end
 
+--- Validates and normalizes Homebrew outdated entries for one package kind.
 local function parse_packages(entries, kind)
 	local packages = {}
 	for _, entry in ipairs(entries) do
@@ -193,6 +198,7 @@ local function parse_packages(entries, kind)
 	return packages, nil
 end
 
+--- Extracts and decodes Homebrew's outdated JSON from mixed command output.
 local function decode_outdated(output)
 	local raw = tostring(output or "")
 	local search_from = 1
@@ -226,6 +232,7 @@ local function decode_outdated(output)
 	return nil, nil, nil, schema_error or "Homebrew output did not contain a valid JSON object"
 end
 
+--- Returns formula and cask snapshots as one package list.
 local function all_packages()
 	local packages = {}
 	for _, package in ipairs(state.formulae) do
@@ -237,10 +244,12 @@ local function all_packages()
 	return packages
 end
 
+--- Reports whether policy and pinning allow a package to be upgraded.
 local function package_is_upgradeable(package)
 	return not package.pinned and package.upgradeable ~= false
 end
 
+--- Returns sorted upgradeable package names for a Homebrew package kind.
 local function upgradeable_package_names(kind)
 	local source = kind == "formula" and state.formulae or state.casks
 	assert(type(source) == "table", "package state must be a table")
@@ -254,6 +263,7 @@ local function upgradeable_package_names(kind)
 	return names
 end
 
+--- Counts packages eligible for automatic or manual upgrade.
 local function count_upgradeable_packages()
 	local count = 0
 	for _, package in ipairs(all_packages()) do
@@ -264,6 +274,7 @@ local function count_upgradeable_packages()
 	return count
 end
 
+--- Builds a non-interactive Homebrew upgrade command for selected packages.
 local function upgrade_arguments(kind, names)
 	local arguments = {
 		"/usr/bin/env",
@@ -280,10 +291,12 @@ local function upgrade_arguments(kind, names)
 	return arguments
 end
 
+--- Reports whether a refresh or mutation operation is in progress.
 local function operation_is_active()
 	return state.operation ~= nil
 end
 
+--- Publishes Homebrew source actions for the current operation and settings.
 local function configure_source_actions()
 	local operation = state.operation
 	local actions
@@ -327,6 +340,7 @@ local function configure_source_actions()
 	})
 end
 
+--- Publishes the current Homebrew update, warning, and error snapshot.
 local function publish()
 	local operation = state.operation
 	local items = {}
@@ -398,6 +412,7 @@ local function publish()
 	easybar.inbox.replace(SOURCE, items)
 end
 
+--- Clears a matching active operation and invokes its completion callback.
 local function complete_operation(operation, callback)
 	if state.operation ~= operation then
 		return
@@ -413,6 +428,7 @@ local function complete_operation(operation, callback)
 	end)
 end
 
+--- Replaces package state with a validated Homebrew outdated response.
 local function apply_outdated(output)
 	local formulae, casks, warning, decode_error = decode_outdated(output)
 	if formulae == nil then
@@ -427,6 +443,7 @@ local function apply_outdated(output)
 	return true
 end
 
+--- Refreshes Homebrew outdated data while coalescing overlapping requests.
 refresh = function(reason, activity_item_id)
 	reason = tostring(reason or "unspecified")
 	if operation_is_active() then
@@ -458,6 +475,7 @@ refresh = function(reason, activity_item_id)
 	local current_attempt = 0
 	operation.handle = retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
+		--- Starts one Homebrew outdated attempt for the retry controller.
 		attempt = function(done, attempt_number)
 			current_attempt = attempt_number
 			log(
@@ -472,6 +490,7 @@ refresh = function(reason, activity_item_id)
 				"--json=v2",
 			}, EXEC.check, done)
 		end,
+		--- Reports whether a failed refresh should be retried as a transient network error.
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
@@ -487,6 +506,7 @@ refresh = function(reason, activity_item_id)
 			end
 			return retryable
 		end,
+		--- Applies the final refresh result and releases active-operation state.
 		on_complete = function(output, code, attempts, metadata)
 			complete_operation(operation, function()
 				local should_upgrade = false
@@ -535,6 +555,7 @@ refresh = function(reason, activity_item_id)
 	})
 end
 
+--- Runs a cancellable sequence of Homebrew mutation steps.
 local function run_operation_steps(operation_id, label, steps, item_id, on_success)
 	if operation_is_active() then
 		log(easybar.level.trace, "inbox mutation skipped operation=" .. operation_id .. " state=operation_active")
@@ -560,11 +581,13 @@ local function run_operation_steps(operation_id, label, steps, item_id, on_succe
 
 	local token
 	local handle = {}
+	--- Requests cancellation of the active step and prevents later steps from starting.
 	function handle:cancel()
 		return type(token) == "string" and easybar.cancel_async(token) or false
 	end
 	operation.handle = handle
 
+	--- Finalizes the step sequence once and reports its aggregate result.
 	local function finish(cancelled, output, code)
 		complete_operation(operation, function()
 			if cancelled then
@@ -593,6 +616,7 @@ local function run_operation_steps(operation_id, label, steps, item_id, on_succe
 
 	local step_index = 0
 	local run_next
+	--- Runs the next mutation step or completes the operation when none remain.
 	run_next = function()
 		if operation.cancellation_requested then
 			finish(true, "", 0)
@@ -629,6 +653,7 @@ local function run_operation_steps(operation_id, label, steps, item_id, on_succe
 	run_next()
 end
 
+--- Runs one Homebrew mutation command through the shared step runner.
 local function run_operation(operation_id, label, arguments, options, item_id, on_success)
 	run_operation_steps(operation_id, label, {
 		{
@@ -639,6 +664,7 @@ local function run_operation(operation_id, label, arguments, options, item_id, o
 	}, item_id, on_success)
 end
 
+--- Upgrades every formula and cask allowed by the shared Homebrew policy.
 run_upgrade_all = function()
 	local formulae = upgradeable_package_names("formula")
 	local casks = upgradeable_package_names("cask")
@@ -662,6 +688,7 @@ run_upgrade_all = function()
 	run_operation_steps("upgrade_all", "Homebrew upgrade", steps)
 end
 
+--- Runs the automatic update-and-upgrade cycle when enabled.
 run_automatic_update_cycle = function(reason)
 	if not automatic_updates then
 		refresh(reason)
@@ -673,6 +700,7 @@ run_automatic_update_cycle = function(reason)
 	end)
 end
 
+--- Persists automatic-update behavior and starts a cycle when enabled.
 local function set_automatic_updates(enabled)
 	if type(enabled) ~= "boolean" or enabled == automatic_updates then
 		configure_source_actions()
@@ -703,6 +731,7 @@ local function set_automatic_updates(enabled)
 	end
 end
 
+--- Finds a Homebrew package represented by an inbox item identifier.
 local function package_for_id(id)
 	for _, package in ipairs(all_packages()) do
 		if package.id == id then
@@ -712,6 +741,7 @@ local function package_for_id(id)
 	return nil
 end
 
+--- Replaces any pending delayed refresh with a newly scheduled request.
 local function schedule_refresh(reason, delay_seconds)
 	reason = tostring(reason or "unspecified")
 	delay_seconds = tonumber(delay_seconds) or 0
@@ -800,6 +830,7 @@ end)
 local timer = easybar.add(easybar.kind.item, "brew_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
+	--- Runs the scheduled refresh and automatic-update checks.
 	on_interval = function()
 		run_automatic_update_cycle("interval")
 	end,

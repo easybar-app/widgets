@@ -1342,6 +1342,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	label = {
 		string = "",
 	},
+	--- Performs the periodic due check and refreshes package state when necessary.
 	on_interval = function()
 		if not running then
 			check_outdated("Checking outdated packages…")

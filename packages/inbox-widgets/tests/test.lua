@@ -2,16 +2,19 @@ local root = assert(arg[1], "repository root argument is required")
 local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
+--- Loads the widget with controlled storage values and returns its test state.
 local function load_widget(storage_values)
 	return host.load(root, easybar_root, "inbox-widgets", storage_values)
 end
 
+--- Completes both asynchronous data reads for one widget refresh.
 local function complete_refresh(state, installed_fixture, registry_fixture)
 	state:complete_next_command(installed_fixture, 0)
 	state:complete_next_command(registry_fixture, 0)
 	state:run_next_timer()
 end
 
+--- Verifies registry updates are found while local-only packages are ignored.
 local function test_finds_registry_updates_and_ignores_local_packages()
 	local state = load_widget()
 	state:run_next_timer()
@@ -31,6 +34,7 @@ local function test_finds_registry_updates_and_ignores_local_packages()
 	assert(assert(state:source_action("update_all")).title == "Update all (1)", "the source must offer all updates")
 end
 
+--- Verifies a package update invokes the CLI and refreshes update state.
 local function test_update_runs_the_package_updater_and_rechecks()
 	local state = load_widget()
 	state:run_next_timer()
@@ -51,6 +55,7 @@ local function test_update_runs_the_package_updater_and_rechecks()
 	assert(state:item("package:brew") == nil, "the updated package must disappear from the inbox")
 end
 
+--- Verifies updating all packages invokes the aggregate CLI update command.
 local function test_update_all_uses_the_cli_update_command()
 	local state = load_widget()
 	state:run_next_timer()
@@ -64,6 +69,7 @@ local function test_update_all_uses_the_cli_update_command()
 	)
 end
 
+--- Verifies invalid registry data preserves the last valid update snapshot.
 local function test_invalid_registry_retains_the_last_snapshot()
 	local state = load_widget()
 	state:run_next_timer()
@@ -75,6 +81,7 @@ local function test_invalid_registry_retains_the_last_snapshot()
 	assert(state:item("error") ~= nil, "a failed check must publish an error")
 end
 
+--- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
 		["inbox-widgets:refresh_interval_minutes"] = 15,

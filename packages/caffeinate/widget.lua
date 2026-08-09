@@ -37,10 +37,12 @@ local stopping = false
 
 local start
 
+--- Reports whether a caffeinate process is currently running.
 local function is_active()
 	return active_job ~= nil
 end
 
+--- Reports whether the requested mode and duration describe the active session.
 local function is_selected(mode, duration_minutes)
 	if not is_active() or active_mode ~= mode then
 		return false
@@ -48,6 +50,7 @@ local function is_selected(mode, duration_minutes)
 	return mode ~= "timed" or active_duration_minutes == duration_minutes
 end
 
+--- Formats the remaining timed-session duration for display.
 local function remaining_text()
 	if expires_at == nil then
 		return nil
@@ -66,6 +69,7 @@ local function remaining_text()
 	return tostring(minutes) .. "m"
 end
 
+--- Builds the popup status text for the current session state.
 local function status_text()
 	if stopping then
 		return "Caffeinate · Stopping…"
@@ -78,6 +82,7 @@ local function status_text()
 	return remaining ~= nil and ("Caffeinate · Awake for " .. remaining) or "Caffeinate · Awake until turned off"
 end
 
+--- Builds the context-menu entries for starting or stopping caffeinate.
 local function context_menu()
 	local active = is_active()
 	local durations = {}
@@ -116,6 +121,7 @@ local function context_menu()
 	return menu
 end
 
+--- Renders the bar icon, popup label, and context menu from current state.
 local function render()
 	local color = COLORS.muted
 	if stopping then
@@ -148,6 +154,7 @@ local function render()
 	})
 end
 
+--- Clears all state associated with the current caffeinate session.
 local function clear_session()
 	active_job = nil
 	active_mode = nil
@@ -156,6 +163,7 @@ local function clear_session()
 	stopping = false
 end
 
+--- Finalizes a caffeinate process while ignoring callbacks from superseded sessions.
 local function finish(session_generation, output, code)
 	if session_generation ~= generation then
 		return
@@ -187,6 +195,7 @@ local function finish(session_generation, output, code)
 	render()
 end
 
+--- Starts an indefinite or timed caffeinate session when the widget is idle.
 start = function(mode, duration_minutes)
 	if is_active() or stopping then
 		return
@@ -239,6 +248,7 @@ start = function(mode, duration_minutes)
 	render()
 end
 
+--- Cancels the active caffeinate process and updates the rendered state.
 local function stop()
 	if not is_active() or stopping then
 		return
@@ -252,6 +262,7 @@ local function stop()
 	render()
 end
 
+--- Stops the active session or starts one using the persisted duration preference.
 local function toggle()
 	if is_active() then
 		stop()

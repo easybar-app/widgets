@@ -3,10 +3,12 @@ local easybar_root = assert(arg[2], "EasyBar repository root argument is require
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 local _, inbox = host.modules(root, easybar_root)
 
+--- Loads the widget with controlled storage values and returns its test state.
 local function load_widget(storage_values)
 	return host.load(root, easybar_root, "inbox-github", storage_values)
 end
 
+--- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
 		["github-inbox:refresh_interval_minutes"] = 15,
@@ -30,6 +32,7 @@ local function test_configures_the_refresh_interval()
 	assert(assert(state:item("thread-1")).source.order == 17, "the GitHub source must use the configured order")
 end
 
+--- Verifies widget actions do not duplicate native inbox read and dismiss controls.
 local function test_item_actions_do_not_duplicate_native_controls()
 	local state = load_widget()
 	state:run_next_timer()
@@ -51,6 +54,7 @@ local function test_item_actions_do_not_duplicate_native_controls()
 	assert(state:item_has_action("thread-1", "prepare_merge"), "pull requests must retain their Merge action")
 end
 
+--- Verifies that the native read action marks the notification read on GitHub.
 local function test_native_read_action_marks_the_github_notification_read()
 	local state = load_widget()
 	state:run_next_timer()
@@ -72,6 +76,7 @@ local function test_native_read_action_marks_the_github_notification_read()
 	assert(state:item("thread-1") == nil, "the read GitHub notification must disappear after refresh")
 end
 
+--- Verifies overlapping remote read actions coalesce their follow-up refreshes.
 local function test_overlapping_native_read_actions_coalesce_refreshes()
 	local state = load_widget()
 	state:run_next_timer()
@@ -91,6 +96,7 @@ local function test_overlapping_native_read_actions_coalesce_refreshes()
 	assert(state:item("thread-2") == nil, "the follow-up refresh must observe the second read mutation")
 end
 
+--- Verifies the selected merge method persists and controls the merge command.
 local function test_merge_method_setting_persists_and_drives_merge()
 	local state = load_widget()
 	assert(
@@ -132,6 +138,7 @@ local function test_merge_method_setting_persists_and_drives_merge()
 	assert(not arguments["--squash"], "GitHub merge command must not retain the previous squash method")
 end
 
+--- Verifies merges run immediately when confirmation has not been enabled.
 local function test_merge_confirmation_defaults_to_immediate()
 	local state = load_widget()
 	assert(
@@ -158,6 +165,7 @@ local function test_merge_confirmation_defaults_to_immediate()
 	assert(arguments["0123456789abcdef"], "GitHub immediate mode must merge the inspected head commit")
 end
 
+--- Verifies refresh errors preserve the last valid notification snapshot.
 local function test_errors_retain_snapshot()
 	local state = load_widget()
 	state:run_next_timer()

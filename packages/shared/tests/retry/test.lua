@@ -10,11 +10,13 @@ local attempts = 0
 
 local operation = retry.run(easybar, {
 	delays = { 2 },
+	--- Simulates a transient failure followed by a successful retry.
 	attempt = function(done)
 		attempts = attempts + 1
 		return easybar.spawn_async({ "probe" }, {}, done)
 	end,
 	should_retry = retry.is_transient_network_error,
+	--- Captures the completed retry result for assertions.
 	on_complete = function(output, code, count, metadata)
 		completed = { output = output, code = code, count = count, duration_ms = metadata.duration_ms }
 	end,

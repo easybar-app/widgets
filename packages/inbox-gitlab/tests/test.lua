@@ -3,10 +3,12 @@ local easybar_root = assert(arg[2], "EasyBar repository root argument is require
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 local _, inbox = host.modules(root, easybar_root)
 
+--- Loads the widget with controlled storage values and returns its test state.
 local function load_widget(storage_values)
 	return host.load(root, easybar_root, "inbox-gitlab", storage_values)
 end
 
+--- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
 		["gitlab-inbox:refresh_interval_minutes"] = 15,
@@ -31,6 +33,7 @@ local function test_configures_the_refresh_interval()
 	assert(assert(state:item("issue:1")).source.order == 27, "the GitLab source must use the configured order")
 end
 
+--- Verifies the selected merge method persists and controls the merge command.
 local function test_merge_method_setting_persists_and_drives_merge()
 	local state = load_widget()
 	assert(
@@ -85,6 +88,7 @@ local function test_merge_method_setting_persists_and_drives_merge()
 	assert(arguments["https://gitlab.com/easybar/easybar"], "GitLab merge command must target the source project")
 end
 
+--- Verifies merges run immediately when confirmation has not been enabled.
 local function test_merge_confirmation_defaults_to_immediate()
 	local state = load_widget()
 	assert(
@@ -112,6 +116,7 @@ local function test_merge_confirmation_defaults_to_immediate()
 	assert(arguments["fedcba9876543210"], "GitLab immediate mode must merge the inspected head commit")
 end
 
+--- Verifies widget actions do not duplicate native inbox read and dismiss controls.
 local function test_item_actions_do_not_duplicate_native_controls()
 	local state = load_widget()
 	state:run_next_timer()
@@ -132,6 +137,7 @@ local function test_item_actions_do_not_duplicate_native_controls()
 	)
 end
 
+--- Verifies refresh errors preserve the last valid work-item snapshot.
 local function test_errors_retain_snapshot()
 	local state = load_widget()
 	state:run_next_timer()

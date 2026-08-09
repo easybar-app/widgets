@@ -31,6 +31,7 @@ if
 then
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
 end
+--- Reads and validates a configured inbox source or context-menu order.
 local function configured_order(key, default)
 	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
 	local value = tonumber(configured)
@@ -70,6 +71,7 @@ if refresh_interval_minutes ~= configured_refresh_interval then
 	)
 end
 
+--- Returns the path to EasyBar's installed-package database.
 local function installed_database_path()
 	local active_directory = os.getenv("EASYBAR_INTERNAL_WIDGET_PACKAGES_DIRECTORY")
 	if type(active_directory) == "string" and active_directory ~= "" then
@@ -86,6 +88,7 @@ local function installed_database_path()
 	return home .. "/.local/share/easybar/packages/installed.json"
 end
 
+--- Decodes a JSON object or returns a source-specific validation error.
 local function decode_object(output, label)
 	local ok, value = pcall(easybar.json.decode, tostring(output or ""))
 	if not ok or type(value) ~= "table" or easybar.json.is_array(value) then
@@ -94,6 +97,7 @@ local function decode_object(output, label)
 	return value, nil
 end
 
+--- Parses a semantic version into numeric core and prerelease components.
 local function parse_version(value)
 	if type(value) ~= "string" then
 		return nil
@@ -114,6 +118,7 @@ local function parse_version(value)
 	}
 end
 
+--- Compares two semantic-version prerelease identifier sequences.
 local function compare_prerelease(left, right)
 	if left == right then
 		return 0
@@ -155,6 +160,7 @@ local function compare_prerelease(left, right)
 	return 0
 end
 
+--- Compares two semantic versions, returning their ordering when both are valid.
 local function compare_versions(left_value, right_value)
 	local left = parse_version(left_value)
 	local right = parse_version(right_value)
@@ -169,6 +175,7 @@ local function compare_versions(left_value, right_value)
 	return compare_prerelease(left.prerelease, right.prerelease)
 end
 
+--- Returns the registry release entries available for an installed package.
 local function release_sources(package)
 	local sources = {}
 	if not easybar.json.is_array(package.versions) then
@@ -182,6 +189,7 @@ local function release_sources(package)
 	return sources
 end
 
+--- Finds registry releases newer than the corresponding installed package versions.
 local function find_updates(installed_output, registry_output)
 	local installed, installed_error = decode_object(installed_output, "The installed package database")
 	if installed == nil then
@@ -236,6 +244,7 @@ local function find_updates(installed_output, registry_output)
 	return updates, nil
 end
 
+--- Finds the update candidate represented by an inbox item identifier.
 local function package_for_id(id)
 	for _, package in ipairs(state.updates) do
 		if package.id == id then
@@ -245,6 +254,7 @@ local function package_for_id(id)
 	return nil
 end
 
+--- Publishes source-level actions that reflect the active update operation.
 local function configure_source_actions()
 	local operation = state.operation
 	local refresh_interval = {
@@ -283,6 +293,7 @@ local function configure_source_actions()
 	end
 end
 
+--- Publishes the current widget-update snapshot to the native inbox.
 local function publish()
 	local items = {}
 	if state.error ~= nil then
@@ -321,6 +332,7 @@ local function publish()
 	easybar.inbox.replace(SOURCE, items)
 end
 
+--- Completes the current operation if it has not been replaced or cancelled.
 local function finish_operation(operation, callback)
 	if state.operation ~= operation then
 		return
@@ -333,6 +345,7 @@ local function finish_operation(operation, callback)
 	end)
 end
 
+--- Records and publishes an operation failure before clearing busy state.
 local function fail_operation(operation, title, output, fallback)
 	finish_operation(operation, function()
 		state.error = {
@@ -344,6 +357,7 @@ local function fail_operation(operation, title, output, fallback)
 	end)
 end
 
+--- Refreshes installed and registry package data, coalescing concurrent requests.
 refresh = function(reason, activity_item_id)
 	if state.operation ~= nil then
 		return
@@ -384,6 +398,7 @@ refresh = function(reason, activity_item_id)
 
 		operation.handle = retry.run(easybar, {
 			delays = REFRESH_BACKOFF_SECONDS,
+			--- Starts the registry-index request after installed package data is available.
 			attempt = function(done)
 				return easybar.spawn_async({
 					"/usr/bin/curl",
@@ -395,6 +410,7 @@ refresh = function(reason, activity_item_id)
 				}, EXEC.registry, done)
 			end,
 			should_retry = retry.is_transient_network_error,
+			--- Combines installed and registry results into the final update snapshot.
 			on_complete = function(registry_output, registry_code)
 				if registry_code ~= 0 then
 					fail_operation(
@@ -422,6 +438,7 @@ refresh = function(reason, activity_item_id)
 	end)
 end
 
+--- Runs an EasyBar package update command and refreshes the resulting snapshot.
 local function run_update(arguments, title, item_id)
 	if state.operation ~= nil then
 		return
@@ -451,10 +468,12 @@ local function run_update(arguments, title, item_id)
 	end)
 end
 
+--- Updates the package represented by one inbox item.
 local function update_package(package)
 	run_update({ "/usr/bin/env", "easybar", "widgets", "update", package.name }, "Updating " .. package.name, package.id)
 end
 
+--- Updates every installed package that has a newer registry release.
 local function update_all_packages()
 	run_update({ "/usr/bin/env", "easybar", "widgets", "update", "--all" }, "Updating all widgets", nil)
 end
@@ -480,6 +499,7 @@ easybar.inbox.on_context_action(SOURCE, function(event)
 	end
 end)
 
+--- Replaces any pending delayed refresh with a newly scheduled request.
 local function schedule_refresh(reason, delay_seconds)
 	if pending_refresh ~= nil then
 		pending_refresh:cancel()
@@ -493,6 +513,7 @@ end
 local timer = easybar.add(easybar.kind.item, "easybar_package_updates_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
+	--- Schedules the periodic widget-package update check.
 	on_interval = function()
 		refresh("interval")
 	end,
