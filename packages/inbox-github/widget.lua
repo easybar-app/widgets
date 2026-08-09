@@ -119,7 +119,7 @@ end
 local function merge_confirmation_action()
 	return {
 		id = "merge_confirmation",
-		title = "Merge confirmation",
+		title = "Merge configuration",
 		children = {
 			{
 				id = "merge_confirmation:required",
@@ -129,22 +129,6 @@ local function merge_confirmation_action()
 				id = "merge_confirmation:immediate",
 				title = (not merge_confirmation_required and "✓ " or "") .. "Merge immediately",
 			},
-		},
-	}
-end
-
-local function settings_action()
-	return {
-		id = "settings",
-		title = "Settings",
-		children = {
-			{
-				id = "refresh_interval",
-				title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
-				enabled = false,
-			},
-			merge_method_action(),
-			merge_confirmation_action(),
 		},
 	}
 end
@@ -164,7 +148,13 @@ local function configure_source_actions()
 	else
 		actions = { { id = "refresh", title = "Refresh", include_in_refresh_all = true } }
 	end
-	actions[#actions + 1] = settings_action()
+	actions[#actions + 1] = {
+		id = "refresh_interval",
+		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+		enabled = false,
+	}
+	actions[#actions + 1] = merge_method_action()
+	actions[#actions + 1] = merge_confirmation_action()
 	easybar.inbox.configure(SOURCE, {
 		order = context_order,
 		presentation = SOURCE_PRESENTATION,

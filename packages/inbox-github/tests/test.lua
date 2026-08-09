@@ -19,10 +19,13 @@ local function test_configures_the_refresh_interval()
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the GitHub context menu must show the refresh interval"
 	)
+	assert(state:source_action("settings") == nil, "GitHub settings must not add an outer submenu")
+	assert(state.configuration.actions[2].id == "refresh_interval", "GitHub refresh interval must be top-level")
+	assert(state.configuration.actions[3].id == "merge_method", "GitHub merge method must be top-level")
+	assert(state.configuration.actions[4].id == "merge_confirmation", "GitHub merge configuration must be top-level")
 	state:run_next_timer()
 	assert(type(state.configuration.presentation.icon) == "string", "GitHub refresh activity must retain its source icon")
 	assert(state.configuration.order == 18, "the GitHub context must use the configured order")
-	assert(assert(state:source_action("settings")).children ~= nil, "GitHub settings must use a submenu")
 	state:complete_next_command("github-one", 0)
 	assert(assert(state:item("thread-1")).source.order == 17, "the GitHub source must use the configured order")
 end
