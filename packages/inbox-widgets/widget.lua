@@ -271,7 +271,7 @@ local function configure_source_actions()
 					id = "activity",
 					title = operation.title,
 					enabled = false,
-					busy = operation.item_id == nil,
+					busy = true,
 					include_in_refresh_all = operation.kind == "refresh" or nil,
 				},
 				refresh_interval,
@@ -282,6 +282,7 @@ local function configure_source_actions()
 			order = context_order,
 			presentation = SOURCE_PRESENTATION,
 			actions = {
+				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{
 					id = "update_all",
 					title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",

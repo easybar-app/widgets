@@ -2,7 +2,11 @@
 
 `widget.lua` checks the official EasyBar widget registry and publishes available package updates to EasyBar's native inbox.
 
-Use **Update** on an inbox item to install that package's latest registry release. The source menu provides **Update all** when updates are available; checks run every six hours and after wake or session activation. These actions use `easybar widgets update`, so the same update behavior is available from the terminal.
+Use **Update** on an inbox item to install that package's latest registry release. Use **Refresh**
+from the Widgets source menu—or the inbox refresh button—to check immediately. The source menu
+also provides **Update all** when updates are available; checks run every six hours and after wake
+or session activation. Update actions use `easybar widgets update`, so the same behavior is
+available from the terminal.
 
 ## Configuration
 

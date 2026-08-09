@@ -47,6 +47,7 @@ local function test_update_runs_the_package_updater_and_rechecks()
 
 	state.action_handler({ action_id = "update", target_widget_id = "package:brew" })
 	assert(state:item_action_is_busy("package:brew", "update"), "the package update must show inline activity")
+	assert(state:has_busy_source_action(), "the package update must show source activity")
 	local command = state.commands[1].command
 	assert(
 		table.concat(command, " ") == "/usr/bin/env easybar widgets update brew",
@@ -86,6 +87,20 @@ local function test_invalid_registry_retains_the_last_snapshot()
 	assert(state:item("error") ~= nil, "a failed check must publish an error")
 end
 
+--- Verifies manual refresh participates in the native inbox refresh action.
+local function test_manual_refresh_rechecks_packages()
+	local state = load_widget()
+	state:run_next_timer()
+	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
+	local refresh = assert(state:source_action("refresh"), "Widgets must provide a manual refresh action")
+	assert(refresh.title == "Refresh", "the Widgets context menu must label the manual refresh action")
+	assert(refresh.include_in_refresh_all == true, "the inbox refresh button must include Widgets")
+
+	state.context_action_handler({ action_id = "refresh" })
+	assert(state:has_busy_source_action(), "manual refresh must show source activity")
+	assert(state.commands[1].command[1] == "/bin/cat", "manual refresh must recheck installed packages")
+end
+
 --- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
@@ -107,8 +122,12 @@ local function test_configures_the_refresh_interval()
 		"the Widgets context menu must show the refresh interval"
 	)
 	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
-	assert(state.configuration.actions[1].id == "update_all", "Widgets update status must be first")
-	assert(state.configuration.actions[2].id == "refresh_interval", "Widgets refresh interval must be top-level")
+	local refresh = assert(state:source_action("refresh"), "Widgets must provide a manual refresh action")
+	assert(refresh.title == "Refresh", "the Widgets context menu must label the manual refresh action")
+	assert(refresh.include_in_refresh_all == true, "the inbox refresh button must include Widgets")
+	assert(state.configuration.actions[1].id == "refresh", "Widgets manual refresh must be first")
+	assert(state.configuration.actions[2].id == "update_all", "Widgets update status must follow refresh")
+	assert(state.configuration.actions[3].id == "refresh_interval", "Widgets refresh interval must be top-level")
 	assert(assert(state:item("package:brew")).source.order == 37, "the Widgets source must use the configured order")
 end
 
@@ -116,6 +135,7 @@ test_finds_registry_updates_and_ignores_local_packages()
 test_update_runs_the_package_updater_and_rechecks()
 test_update_all_uses_the_cli_update_command()
 test_invalid_registry_retains_the_last_snapshot()
+test_manual_refresh_rechecks_packages()
 test_configures_the_refresh_interval()
 
 print("Widgets inbox regression checks passed")
