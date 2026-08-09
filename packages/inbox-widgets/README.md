@@ -23,7 +23,7 @@ easybar config reload
 
 `source_order` controls the Widgets group when the inbox is grouped by source. `context_order`
 independently controls its position in the inbox source menu. Lower values appear first. The source
-context menu also shows the active refresh interval.
+context menu shows the active refresh interval under **Settings**.
 
 Only packages whose recorded installation source matches a release in the official registry are checked. Packages installed from a local directory, custom archive, or another registry are left untouched.
 
@@ -35,4 +35,4 @@ easybar widgets uninstall inbox-widget-updates
 
 ## Requirements
 
-The widget requires EasyBar 0.45.0 or newer, plus `curl` and the `easybar` CLI in `[app.env].PATH`.
+The widget requires EasyBar 0.49.0 or newer, plus `curl` and the `easybar` CLI in `[app.env].PATH`.

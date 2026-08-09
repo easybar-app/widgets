@@ -89,6 +89,7 @@ local function test_configures_the_refresh_interval()
 		"Widgets refresh activity must retain its source icon"
 	)
 	assert(state.configuration.order == 38, "the Widgets context must use the configured order")
+	assert(assert(state:source_action("settings")).children ~= nil, "Widgets settings must use a submenu")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Widgets context menu must show the refresh interval"
