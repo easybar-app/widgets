@@ -201,7 +201,9 @@ local function item_actions(notification, item_id)
 	local busy_action = busy_item_actions[item_id]
 	local confirmation = merge_confirmations[item_id]
 
-	if busy_action == "prepare_merge" then
+	if busy_action == "mark_read" then
+		return actions
+	elseif busy_action == "prepare_merge" then
 		append_action(actions, "prepare_merge", "Checking merge…", false, true)
 	elseif busy_action == "confirm_merge" then
 		append_action(actions, "confirm_merge", "Merging…", false, true)
@@ -799,6 +801,32 @@ local function set_merge_method(method)
 	publish_current_notifications()
 end
 
+local function mark_notification_read(item_id)
+	if item_id == "" or busy_item_actions[item_id] ~= nil or notification_for_id(item_id) == nil then
+		return
+	end
+
+	busy_item_actions[item_id] = "mark_read"
+	merge_confirmations[item_id] = nil
+	log(easybar.level.info, "inbox mutation started operation=mark_read item_id=" .. item_id)
+	easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. item_id }, {
+		timeout_seconds = 20,
+		log_operation = "mark_read",
+	}, function(output, code)
+		if code == 0 then
+			log(easybar.level.info, "inbox mutation completed operation=mark_read item_id=" .. item_id)
+			refresh("post_mutation", item_id)
+		else
+			busy_item_actions[item_id] = nil
+			log(
+				easybar.level.error,
+				"inbox mutation failed operation=mark_read item_id=" .. item_id .. " status=" .. tostring(code)
+			)
+			publish_error(output, "GitHub could not mark the notification as read", "Could not mark notification read")
+		end
+	end)
+end
+
 easybar.inbox.on_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "unknown")
 	local item_id = tostring(event.target_widget_id or "")
@@ -806,6 +834,8 @@ easybar.inbox.on_action(SOURCE, function(event)
 
 	if action_id == "refresh" then
 		refresh("manual")
+	elseif action_id == "mark_read" then
+		mark_notification_read(item_id)
 	elseif action_id == "prepare_merge" then
 		prepare_merge(item_id)
 	elseif action_id == "confirm_merge" then

@@ -51,6 +51,46 @@ local function test_item_actions_do_not_duplicate_native_controls()
 	assert(state:item_has_action("thread-1", "prepare_merge"), "pull requests must retain their Merge action")
 end
 
+local function test_native_read_action_marks_the_github_notification_read()
+	local state = load_widget()
+	state:run_next_timer()
+	state:complete_next_command("github-one", 0)
+
+	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-1" })
+	assert(
+		table.concat(state.commands[1].command, " ") == "gh api --method PATCH notifications/threads/thread-1",
+		"GitHub native read actions must mark the notification thread read"
+	)
+	assert(
+		not state:item_has_action("thread-1", "mark_read"),
+		"GitHub must synchronize through the native control without adding another read action"
+	)
+
+	state:complete_next_command("", 0)
+	assert(#state.commands == 1, "a successful GitHub read mutation must refresh notifications")
+	state:complete_next_command("github-empty", 0)
+	assert(state:item("thread-1") == nil, "the read GitHub notification must disappear after refresh")
+end
+
+local function test_overlapping_native_read_actions_coalesce_refreshes()
+	local state = load_widget()
+	state:run_next_timer()
+	state:complete_next_command("github-two", 0)
+
+	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-1" })
+	state.action_handler({ action_id = "mark_read", target_widget_id = "thread-2" })
+	assert(#state.commands == 2, "GitHub must allow read mutations for different notifications to overlap")
+
+	state:complete_command(1, "", 0)
+	assert(#state.commands == 2, "the first GitHub read mutation must start its refresh")
+	state:complete_command(1, "", 0)
+	assert(#state.commands == 1, "the second GitHub read mutation must queue behind the active refresh")
+	state:complete_next_command("github-second", 0)
+	assert(#state.commands == 1, "the queued GitHub read mutation must start a follow-up refresh")
+	state:complete_next_command("github-empty", 0)
+	assert(state:item("thread-2") == nil, "the follow-up refresh must observe the second read mutation")
+end
+
 local function test_merge_method_setting_persists_and_drives_merge()
 	local state = load_widget()
 	assert(
@@ -135,6 +175,8 @@ local function test_errors_retain_snapshot()
 end
 
 test_item_actions_do_not_duplicate_native_controls()
+test_native_read_action_marks_the_github_notification_read()
+test_overlapping_native_read_actions_coalesce_refreshes()
 test_merge_method_setting_persists_and_drives_merge()
 test_merge_confirmation_defaults_to_immediate()
 test_errors_retain_snapshot()
