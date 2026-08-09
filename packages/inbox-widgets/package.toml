@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-widgets"
-version = "0.6.3"
+version = "0.7.0"
 kind = "widget"
 description = "EasyBar package updates in the native inbox."
 license = "Apache-2.0"

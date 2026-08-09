@@ -89,12 +89,14 @@ local function test_configures_the_refresh_interval()
 		"Widgets refresh activity must retain its source icon"
 	)
 	assert(state.configuration.order == 38, "the Widgets context must use the configured order")
-	assert(assert(state:source_action("settings")).children ~= nil, "Widgets settings must use a submenu")
+	assert(state:source_action("settings") == nil, "Widgets settings must not add an outer submenu")
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Widgets context menu must show the refresh interval"
 	)
 	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
+	assert(state.configuration.actions[1].id == "update_all", "Widgets update status must be first")
+	assert(state.configuration.actions[2].id == "refresh_interval", "Widgets refresh interval must be top-level")
 	assert(assert(state:item("package:brew")).source.order == 37, "the Widgets source must use the configured order")
 end
 

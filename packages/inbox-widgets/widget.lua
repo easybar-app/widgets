@@ -247,16 +247,10 @@ end
 
 local function configure_source_actions()
 	local operation = state.operation
-	local settings = {
-		id = "settings",
-		title = "Settings",
-		children = {
-			{
-				id = "refresh_interval",
-				title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
-				enabled = false,
-			},
-		},
+	local refresh_interval = {
+		id = "refresh_interval",
+		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+		enabled = false,
 	}
 	if operation ~= nil then
 		easybar.inbox.configure(SOURCE, {
@@ -270,7 +264,7 @@ local function configure_source_actions()
 					busy = operation.item_id == nil,
 					include_in_refresh_all = operation.kind == "refresh" or nil,
 				},
-				settings,
+				refresh_interval,
 			},
 		})
 	else
@@ -278,13 +272,12 @@ local function configure_source_actions()
 			order = context_order,
 			presentation = SOURCE_PRESENTATION,
 			actions = {
-				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{
 					id = "update_all",
 					title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",
 					enabled = #state.updates > 0,
 				},
-				settings,
+				refresh_interval,
 			},
 		})
 	end
