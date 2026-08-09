@@ -1,6 +1,7 @@
 local root = assert(arg[1], "repository root argument is required")
 local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
+local registry_url = "https://raw.githubusercontent.com/easybar-app/registry/main/index.json"
 
 --- Loads the widget with controlled storage values and returns its test state.
 local function load_widget(storage_values)
@@ -10,6 +11,10 @@ end
 --- Completes both asynchronous data reads for one widget refresh.
 local function complete_refresh(state, installed_fixture, registry_fixture)
 	state:complete_next_command(installed_fixture, 0)
+	assert(
+		state.commands[1].command[#state.commands[1].command] == registry_url,
+		"the official registry URL must be used"
+	)
 	state:complete_next_command(registry_fixture, 0)
 	state:run_next_timer()
 end

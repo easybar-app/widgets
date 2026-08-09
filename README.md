@@ -81,7 +81,7 @@ Build an archive locally with:
 make package PACKAGE=package-name OUTPUT_DIR=dist
 ```
 
-Published releases are discovered automatically by the [widget registry](https://github.com/easybar-app/widget-registry).
+Published releases are discovered automatically by the [widget registry](https://github.com/easybar-app/registry).
 
 ## Contributing
 

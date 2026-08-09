@@ -10,7 +10,7 @@ local SOURCE_PRESENTATION = {
 	icon = easybar.asset("assets/easybar.svg"),
 	color = "#6C8EEF",
 }
-local REGISTRY_URL = "https://raw.githubusercontent.com/easybar-app/widget-registry/main/index.json"
+local REGISTRY_URL = "https://raw.githubusercontent.com/easybar-app/registry/main/index.json"
 local STORAGE_WIDGET = "inbox-widgets"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
 local STORAGE_SOURCE_ORDER_KEY = "source_order"
