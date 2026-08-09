@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "tailscale"
-version = "0.1.0"
+version = "0.1.1"
 kind = "widget"
 description = "Tailscale status, connection controls, and exit-node selection."
 license = "Apache-2.0"
