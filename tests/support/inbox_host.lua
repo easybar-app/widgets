@@ -356,12 +356,19 @@ local function make_host(root, package_name, initial_storage_values)
 	end
 
 	function state:source_action(action_id)
-		for _, action in ipairs((self.configuration or {}).actions or {}) do
-			if action.id == action_id then
-				return action
+		local function find(actions)
+			for _, action in ipairs(actions or {}) do
+				if action.id == action_id then
+					return action
+				end
+				local nested = find(action.children)
+				if nested ~= nil then
+					return nested
+				end
 			end
+			return nil
 		end
-		return nil
+		return find((self.configuration or {}).actions)
 	end
 
 	return easybar, state
