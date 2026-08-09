@@ -1,6 +1,6 @@
 # Homebrew Inbox Widget
 
-`widget.lua` publishes outdated Homebrew formulae and casks to the native inbox. Source actions support refresh, `brew update`, automatic upgrades, and cancellation. Package actions can upgrade one eligible item.
+`widget.lua` publishes outdated Homebrew formulae and casks to the native inbox. Source actions support refresh, `brew update`, automatic updates, and cancellation. Package actions can upgrade one eligible item.
 
 ## Requirements
 
@@ -14,10 +14,13 @@ The standalone popup presentation is the `brew` package. Install only one Homebr
 
 ## Configuration
 
-Automatic checks run every 30 minutes by default. Set an interval from 5 minutes to 7 days and reload EasyBar:
+Automatic updates are enabled by default. Every 30 minutes, the widget updates Homebrew metadata,
+checks for outdated packages, and upgrades packages allowed by `brew-policy`. Set an interval from
+5 minutes to 7 days, or disable automatic updates, and reload EasyBar:
 
 ```toml
 [widgets.brew-inbox]
+automatic_updates = true
 refresh_interval_minutes = 30
 source_order = 30
 context_order = 30
@@ -25,4 +28,4 @@ context_order = 30
 
 `source_order` controls the Homebrew group when the inbox is grouped by source.
 `context_order` independently controls its position in the inbox source menu. Lower values appear
-first. The source context menu shows the active refresh interval under **Settings**.
+first. The source context menu shows the automatic-update toggle and active refresh interval directly.

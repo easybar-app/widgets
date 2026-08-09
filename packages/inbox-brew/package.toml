@@ -1,6 +1,6 @@
 manifest_version = 1
 name = "inbox-brew"
-version = "0.3.2"
+version = "0.4.0"
 kind = "widget"
 description = "Homebrew updates and actions in EasyBar's native inbox."
 license = "Apache-2.0"
@@ -20,6 +20,13 @@ shared = "^0.1.0"
 [requirements]
 commands = ["brew"]
 native_inbox = true
+
+[[settings]]
+namespace = "brew-inbox"
+key = "automatic_updates"
+type = "boolean"
+default = true
+description = "Automatically update Homebrew metadata and upgrade eligible outdated packages."
 
 [[settings]]
 namespace = "brew-inbox"

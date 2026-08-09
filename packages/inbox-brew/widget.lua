@@ -13,12 +13,20 @@ local SOURCE_PRESENTATION = {
 	color = "#FBB040",
 }
 local STORAGE_WIDGET = "brew-inbox"
+local STORAGE_AUTOMATIC_UPDATES_KEY = "automatic_updates"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
 local STORAGE_SOURCE_ORDER_KEY = "source_order"
 local STORAGE_CONTEXT_ORDER_KEY = "context_order"
 local DEFAULT_REFRESH_INTERVAL_MINUTES = 30
+local DEFAULT_AUTOMATIC_UPDATES = true
 local DEFAULT_SOURCE_ORDER = 30
 local DEFAULT_CONTEXT_ORDER = 30
+local configured_automatic_updates =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, DEFAULT_AUTOMATIC_UPDATES)
+local automatic_updates = configured_automatic_updates
+if type(automatic_updates) ~= "boolean" then
+	automatic_updates = DEFAULT_AUTOMATIC_UPDATES
+end
 local configured_refresh_interval =
 	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
 local refresh_interval_minutes = tonumber(configured_refresh_interval)
@@ -33,6 +41,12 @@ then
 		"invalid widgets.brew-inbox.refresh_interval_minutes; using " .. tostring(DEFAULT_REFRESH_INTERVAL_MINUTES)
 	)
 	refresh_interval_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
+end
+if automatic_updates ~= configured_automatic_updates then
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.brew-inbox.automatic_updates; using " .. tostring(DEFAULT_AUTOMATIC_UPDATES)
+	)
 end
 local function configured_order(key, default)
 	local configured = easybar.storage.get(STORAGE_WIDGET, key, default)
@@ -67,6 +81,8 @@ local state = {
 }
 local pending_refresh = nil
 local refresh
+local run_automatic_update_cycle
+local run_upgrade_all
 local log = easybar.log
 
 local function json_object_end(raw, start_index)
@@ -290,27 +306,19 @@ local function configure_source_actions()
 			}
 		end
 	else
-		local upgradeable = count_upgradeable_packages()
 		actions = {
 			{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 			{ id = "update", title = "Update" },
-			{
-				id = "upgrade_all",
-				title = upgradeable > 0 and "Upgrade all (" .. tostring(upgradeable) .. ")" or "No automatic upgrades",
-				enabled = upgradeable > 0,
-			},
 		}
 	end
 	actions[#actions + 1] = {
-		id = "settings",
-		title = "Settings",
-		children = {
-			{
-				id = "refresh_interval",
-				title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
-				enabled = false,
-			},
-		},
+		id = "toggle_automatic_updates",
+		title = "Automatic updates: " .. (automatic_updates and "On" or "Off"),
+	}
+	actions[#actions + 1] = {
+		id = "refresh_interval",
+		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+		enabled = false,
 	}
 	easybar.inbox.configure(SOURCE, {
 		order = context_order,
@@ -481,6 +489,7 @@ refresh = function(reason, activity_item_id)
 		end,
 		on_complete = function(output, code, attempts, metadata)
 			complete_operation(operation, function()
+				local should_upgrade = false
 				if code ~= 0 then
 					state.error = {
 						title = "Could not check outdated packages",
@@ -499,6 +508,7 @@ refresh = function(reason, activity_item_id)
 				else
 					local decoded = apply_outdated(output)
 					if decoded then
+						should_upgrade = reason == "automatic_update" and automatic_updates and count_upgradeable_packages() > 0
 						log(
 							easybar.level.debug,
 							"inbox refresh completed reason="
@@ -517,12 +527,15 @@ refresh = function(reason, activity_item_id)
 					end
 				end
 				publish()
+				if should_upgrade then
+					run_upgrade_all()
+				end
 			end)
 		end,
 	})
 end
 
-local function run_operation_steps(operation_id, label, steps, item_id)
+local function run_operation_steps(operation_id, label, steps, item_id, on_success)
 	if operation_is_active() then
 		log(easybar.level.trace, "inbox mutation skipped operation=" .. operation_id .. " state=operation_active")
 		return
@@ -570,7 +583,11 @@ local function run_operation_steps(operation_id, label, steps, item_id)
 				return
 			end
 			log(easybar.level.info, "inbox mutation completed operation=" .. operation_id)
-			refresh("post_mutation", item_id)
+			if on_success ~= nil then
+				on_success()
+			else
+				refresh("post_mutation", item_id)
+			end
 		end)
 	end
 
@@ -612,17 +629,17 @@ local function run_operation_steps(operation_id, label, steps, item_id)
 	run_next()
 end
 
-local function run_operation(operation_id, label, arguments, options, item_id)
+local function run_operation(operation_id, label, arguments, options, item_id, on_success)
 	run_operation_steps(operation_id, label, {
 		{
 			title = label .. "…",
 			arguments = arguments,
 			options = options,
 		},
-	}, item_id)
+	}, item_id, on_success)
 end
 
-local function run_upgrade_all()
+run_upgrade_all = function()
 	local formulae = upgradeable_package_names("formula")
 	local casks = upgradeable_package_names("cask")
 	local steps = {}
@@ -643,6 +660,47 @@ local function run_upgrade_all()
 	end
 
 	run_operation_steps("upgrade_all", "Homebrew upgrade", steps)
+end
+
+run_automatic_update_cycle = function(reason)
+	if not automatic_updates then
+		refresh(reason)
+		return
+	end
+
+	run_operation("automatic_update", "Homebrew update", { "brew", "update" }, EXEC.update, nil, function()
+		refresh("automatic_update")
+	end)
+end
+
+local function set_automatic_updates(enabled)
+	if type(enabled) ~= "boolean" or enabled == automatic_updates then
+		configure_source_actions()
+		return
+	end
+
+	local ok, err = easybar.storage.set(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, enabled)
+	if not ok then
+		state.error = {
+			title = "Could not save automatic updates",
+			message = tostring(err or "EasyBar could not update config.toml"),
+			timestamp = os.time(),
+		}
+		log(easybar.level.error, "inbox setting failed key=" .. STORAGE_AUTOMATIC_UPDATES_KEY .. " error=" .. tostring(err))
+		publish()
+		return
+	end
+
+	automatic_updates = enabled
+	state.error = nil
+	log(
+		easybar.level.info,
+		"inbox setting updated key=" .. STORAGE_AUTOMATIC_UPDATES_KEY .. " value=" .. tostring(enabled)
+	)
+	publish()
+	if enabled then
+		run_automatic_update_cycle("setting_enabled")
+	end
 end
 
 local function package_for_id(id)
@@ -666,7 +724,7 @@ local function schedule_refresh(reason, delay_seconds)
 
 	pending_refresh = easybar.after(delay_seconds, function()
 		pending_refresh = nil
-		refresh(reason)
+		run_automatic_update_cycle(reason)
 	end)
 end
 
@@ -734,8 +792,8 @@ easybar.inbox.on_context_action(SOURCE, function(event)
 		refresh("manual")
 	elseif action_id == "update" then
 		run_operation("update", "Homebrew update", { "brew", "update" }, EXEC.update)
-	elseif action_id == "upgrade_all" and count_upgradeable_packages() > 0 then
-		run_upgrade_all()
+	elseif action_id == "toggle_automatic_updates" then
+		set_automatic_updates(not automatic_updates)
 	end
 end)
 
@@ -743,12 +801,12 @@ local timer = easybar.add(easybar.kind.item, "brew_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = function()
-		refresh("interval")
+		run_automatic_update_cycle("interval")
 	end,
 })
 
 timer:subscribe(easybar.events.forced, function()
-	refresh("forced")
+	run_automatic_update_cycle("forced")
 end)
 
 timer:subscribe(easybar.events.system_woke, function()

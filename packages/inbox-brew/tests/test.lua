@@ -3,7 +3,15 @@ local easybar_root = assert(arg[2], "EasyBar repository root argument is require
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
 local function load_widget(storage_values)
+	storage_values = storage_values or {}
+	if storage_values["brew-inbox:automatic_updates"] == nil then
+		storage_values["brew-inbox:automatic_updates"] = false
+	end
 	return host.load(root, easybar_root, "inbox-brew", storage_values)
+end
+
+local function load_widget_with_defaults()
+	return host.load(root, easybar_root, "inbox-brew")
 end
 
 local function test_configures_the_refresh_interval()
@@ -20,7 +28,11 @@ local function test_configures_the_refresh_interval()
 		"Homebrew refresh activity must retain its source icon"
 	)
 	assert(state.configuration.order == 8, "the Homebrew context must use the configured order")
-	assert(assert(state:source_action("settings")).children ~= nil, "Homebrew settings must use a submenu")
+	assert(state:source_action("settings") == nil, "Homebrew settings must not add an outer submenu")
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: Off",
+		"the Homebrew context menu must show automatic-update state"
+	)
 	assert(
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Homebrew context menu must show the refresh interval"
@@ -32,6 +44,47 @@ local function test_configures_the_refresh_interval()
 	assert(not state:item_has_action(item.id, "open"), "Homebrew must not duplicate the native Open action")
 	assert(not state:item_has_action(item.id, "mark_read"), "Homebrew must not duplicate the native read action")
 	assert(not state:item_has_action(item.id, "dismiss"), "Homebrew must not duplicate the native Dismiss action")
+end
+
+local function test_automatic_updates_default_on_and_upgrade_eligible_packages()
+	local state = load_widget_with_defaults()
+	state:run_next_timer()
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: On",
+		"Homebrew automatic updates must default to on"
+	)
+	assert(table.concat(state.commands[1].command, " ") == "brew update", "the automatic cycle must update Homebrew")
+	state:complete_next_command("", 0)
+	state:run_next_timer()
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
+		"the automatic cycle must check outdated packages after updating Homebrew"
+	)
+	state:complete_next_command('{"scenario":"brew-one"}', 0)
+	state:run_next_timer()
+	assert(
+		table.concat(state.commands[1].command, " ")
+			== "/usr/bin/env HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --formula --yes easybar",
+		"the automatic cycle must upgrade eligible packages"
+	)
+end
+
+local function test_automatic_updates_toggle_persists_and_starts_a_cycle()
+	local state = load_widget({ ["brew-inbox:automatic_updates"] = false })
+	state:run_next_timer()
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: Off",
+		"Homebrew must show the disabled automatic-update state"
+	)
+	state:complete_next_command('{"scenario":"brew-empty"}', 0)
+	state:run_next_timer()
+	state.context_action_handler({ action_id = "toggle_automatic_updates" })
+	assert(state.storage_values["brew-inbox:automatic_updates"] == true, "Homebrew must persist automatic updates")
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: On",
+		"Homebrew must show the enabled automatic-update state"
+	)
+	assert(table.concat(state.commands[1].command, " ") == "brew update", "enabling automatic updates must start a cycle")
 end
 
 local function test_item_refresh_stays_inline()
@@ -116,5 +169,7 @@ test_parser_retains_snapshot_and_handles_warning_braces()
 test_refresh_cancellation_clears_activity()
 test_mutation_cancellation_reconciles_snapshot()
 test_configures_the_refresh_interval()
+test_automatic_updates_default_on_and_upgrade_eligible_packages()
+test_automatic_updates_toggle_persists_and_starts_a_cycle()
 
 print("Homebrew inbox widget regression checks passed")
