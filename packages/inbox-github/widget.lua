@@ -105,33 +105,47 @@ local function merge_method_title(method)
 	return PR_MERGE_METHOD_TITLES[method] or tostring(method)
 end
 
-local function append_merge_method_actions(actions)
-	actions[#actions + 1] = {
-		id = "merge_method",
-		title = "Merge method",
-		enabled = false,
-	}
+local function merge_method_action()
+	local children = {}
 	for _, method in ipairs(PR_MERGE_METHOD_ORDER) do
-		actions[#actions + 1] = {
+		children[#children + 1] = {
 			id = "merge_method:" .. method,
 			title = (method == pr_merge_method and "✓ " or "") .. merge_method_title(method),
 		}
 	end
+	return { id = "merge_method", title = "Merge method", children = children }
 end
 
-local function append_merge_confirmation_actions(actions)
-	actions[#actions + 1] = {
+local function merge_confirmation_action()
+	return {
 		id = "merge_confirmation",
 		title = "Merge confirmation",
-		enabled = false,
+		children = {
+			{
+				id = "merge_confirmation:required",
+				title = (merge_confirmation_required and "✓ " or "") .. "Require confirmation",
+			},
+			{
+				id = "merge_confirmation:immediate",
+				title = (not merge_confirmation_required and "✓ " or "") .. "Merge immediately",
+			},
+		},
 	}
-	actions[#actions + 1] = {
-		id = "merge_confirmation:required",
-		title = (merge_confirmation_required and "✓ " or "") .. "Require confirmation",
-	}
-	actions[#actions + 1] = {
-		id = "merge_confirmation:immediate",
-		title = (not merge_confirmation_required and "✓ " or "") .. "Merge immediately",
+end
+
+local function settings_action()
+	return {
+		id = "settings",
+		title = "Settings",
+		children = {
+			{
+				id = "refresh_interval",
+				title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
+				enabled = false,
+			},
+			merge_method_action(),
+			merge_confirmation_action(),
+		},
 	}
 end
 
@@ -150,13 +164,7 @@ local function configure_source_actions()
 	else
 		actions = { { id = "refresh", title = "Refresh", include_in_refresh_all = true } }
 	end
-	actions[#actions + 1] = {
-		id = "refresh_interval",
-		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
-		enabled = false,
-	}
-	append_merge_method_actions(actions)
-	append_merge_confirmation_actions(actions)
+	actions[#actions + 1] = settings_action()
 	easybar.inbox.configure(SOURCE, {
 		order = context_order,
 		presentation = SOURCE_PRESENTATION,

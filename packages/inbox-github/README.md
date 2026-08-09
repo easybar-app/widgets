@@ -21,10 +21,10 @@ merge_method = "squash"
 confirm_merge = false
 ```
 
-Automatic checks run every 5 minutes by default; `refresh_interval_minutes` accepts values from 5 minutes to 7 days. Supported merge methods are `merge`, `squash`, and `rebase`. `confirm_merge = false` performs the merge after the readiness check; set it to `true` to require a second action. The merge settings can also be changed from the inbox source menu.
+Automatic checks run every 5 minutes by default; `refresh_interval_minutes` accepts values from 5 minutes to 7 days. Supported merge methods are `merge`, `squash`, and `rebase`. `confirm_merge = false` performs the merge after the readiness check; set it to `true` to require a second action. The active interval and merge settings appear in the source menu's **Settings** submenu.
 
 `source_order` controls the GitHub group when the inbox is grouped by source. `context_order`
 independently controls its position in the inbox source menu. Lower values appear first. The source
-context menu also shows the active refresh interval.
+context menu groups the active refresh interval and merge settings under **Settings**.
 
 The standalone popup presentation is the `github` package.
