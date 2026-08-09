@@ -5,8 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "packages/**"
-      - ".github/workflows/sync-docs.yml"
+      - "packages/**/README.md"
   workflow_dispatch:
 
 permissions:
