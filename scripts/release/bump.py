@@ -9,7 +9,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PACKAGES = ROOT / "packages"
 STABLE_SEMVER = re.compile(
     r"(?P<major>0|[1-9][0-9]*)\."

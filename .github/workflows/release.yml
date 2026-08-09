@@ -44,7 +44,7 @@ jobs:
       - name: Build deterministic archive
         id: archive
         run: |
-          scripts/python.sh scripts/package.py \
+          scripts/support/python.sh scripts/release/package.py \
             --package "${{ steps.package.outputs.name }}" \
             --version "${{ steps.package.outputs.version }}" \
             --output-dir dist >> "$GITHUB_OUTPUT"

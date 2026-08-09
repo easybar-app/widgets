@@ -1,6 +1,6 @@
 EASYBAR_ROOT ?= ../easybar
 LUA ?= lua
-PYTHON ?= scripts/python.sh
+PYTHON ?= scripts/support/python.sh
 STYLUA ?= stylua
 PRETTIER ?= npx --yes prettier@3.9.6
 TAPLO ?= npx --yes @taplo/cli@0.7.0
@@ -44,25 +44,25 @@ lint-lua: ## Check Lua formatting with StyLua.
 check: validate check-lua ## Validate packages and run Lua checks.
 
 validate: ## Validate all package manifests.
-	@$(PYTHON) scripts/validate.py
+	@$(PYTHON) scripts/ci/validate.py
 
 check-lua: ## Check Lua syntax and run package tests.
-	@LUA="$(LUA)" EASYBAR_ROOT="$(EASYBAR_ROOT)" scripts/check.sh
+	@LUA="$(LUA)" EASYBAR_ROOT="$(EASYBAR_ROOT)" scripts/ci/check.sh
 
 ##@ Packaging
 
 package: ## Build one package archive with PACKAGE=name.
 	@test -n "$(PACKAGE)" || (echo "PACKAGE is required" >&2; exit 2)
-	@$(PYTHON) scripts/package.py --package "$(PACKAGE)" --output-dir "$(OUTPUT_DIR)"
+	@$(PYTHON) scripts/release/package.py --package "$(PACKAGE)" --output-dir "$(OUTPUT_DIR)"
 
 bump: ## Bump one package version with PACKAGE=name LEVEL=patch|minor|major.
 	@test -n "$(PACKAGE)" || (echo "PACKAGE is required" >&2; exit 2)
 	@test -n "$(LEVEL)" || (echo "LEVEL is required (patch, minor, or major)" >&2; exit 2)
-	@$(PYTHON) scripts/bump.py --package "$(PACKAGE)" --level "$(LEVEL)"
+	@$(PYTHON) scripts/release/bump.py --package "$(PACKAGE)" --level "$(LEVEL)"
 	@$(MAKE) check
 
 release: ## Validate and publish one package with PACKAGE=name.
 	@test -n "$(PACKAGE)" || (echo "PACKAGE is required" >&2; exit 2)
-	@$(PYTHON) scripts/release.py --package "$(PACKAGE)"
+	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)"
 	@$(MAKE) check
-	@$(PYTHON) scripts/release.py --package "$(PACKAGE)" --publish
+	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)" --publish

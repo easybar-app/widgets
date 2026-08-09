@@ -12,7 +12,7 @@ import tarfile
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PACKAGES = ROOT / "packages"
 LICENSE = ROOT / "LICENSE"
 

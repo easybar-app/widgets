@@ -9,7 +9,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PACKAGES = ROOT / "packages"
 SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 PACKAGE_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")

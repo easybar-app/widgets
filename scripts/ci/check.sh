@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 easybar_root="${EASYBAR_ROOT:-${repo_root}/../easybar}"
 lua_bin="${LUA:-lua}"
 
@@ -30,6 +30,6 @@ while IFS=$'\t' read -r package entrypoint; do
   test_count=$((test_count + 1))
   "${lua_bin}" "${repo_root}/tests/smoke/test.lua" \
     "${repo_root}" "${easybar_root}" "${package}" "${entrypoint}"
-done < <("${repo_root}/scripts/python.sh" "${repo_root}/scripts/validate.py" --print-widgets)
+done < <("${repo_root}/scripts/support/python.sh" "${repo_root}/scripts/ci/validate.py" --print-widgets)
 
 printf 'Lua package checks passed (%d tests).\n' "${test_count}"
