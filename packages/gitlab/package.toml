@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "gitlab"
-version = "0.1.1"
+version = "0.1.2"
 kind = "widget"
 description = "Assigned GitLab issues and merge requests in a standalone popup."
 license = "Apache-2.0"

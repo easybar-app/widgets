@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "brew"
-version = "0.2.2"
+version = "0.2.3"
 kind = "widget"
 description = "Homebrew updates and upgrades in a standalone popup."
 license = "Apache-2.0"

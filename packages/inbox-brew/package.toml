@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "inbox-brew"
-version = "0.4.2"
+version = "0.4.3"
 kind = "widget"
 description = "Homebrew updates and actions in EasyBar's native inbox."
 license = "Apache-2.0"
