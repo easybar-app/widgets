@@ -16,6 +16,23 @@ PACKAGES = ROOT / "packages"
 SEMVER = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?")
 PACKAGE_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 ASSET_LITERAL = re.compile(r'easybar\.asset\("([^"@][^"]*)"\)')
+MANIFEST_KEYS = {
+    "manifest_version",
+    "name",
+    "version",
+    "minimum_easybar_kit_version",
+    "kind",
+    "description",
+    "license",
+    "readme",
+    "categories",
+    "entrypoint",
+    "repository",
+    "dependencies",
+    "exports",
+    "requirements",
+    "settings",
+}
 
 
 def fail(message: str) -> None:
@@ -161,11 +178,14 @@ def load_manifests() -> dict[str, tuple[Path, dict]]:
 
 
 def validate_manifest(name: str, package_dir: Path, manifest: dict, names: set[str]) -> None:
-    if manifest.get("manifest_version") != 1:
-        fail(f"{name}: manifest_version must be 1")
+    if manifest.get("manifest_version") != 2:
+        fail(f"{name}: manifest_version must be 2")
+    unknown_keys = sorted(set(manifest) - MANIFEST_KEYS)
+    if unknown_keys:
+        fail(f"{name}: unsupported manifest fields: {', '.join(unknown_keys)}")
     if manifest.get("kind") not in {"widget", "library"}:
         fail(f"{name}: kind must be widget or library")
-    for field in ("version", "minimum_easybar_version"):
+    for field in ("version", "minimum_easybar_kit_version"):
         value = manifest.get(field)
         if not isinstance(value, str) or not SEMVER.fullmatch(value):
             fail(f"{name}: invalid {field}: {value!r}")

@@ -1,6 +1,7 @@
 # Official EasyBar Widgets
 
-Official installable Lua widgets and reusable Lua libraries for [EasyBar](https://github.com/easybar-app/easybar).
+Official installable Lua widgets and reusable Lua libraries for the EasyBar frontends, powered by
+[EasyBarKit](https://github.com/easybar-app/easybar-kit).
 
 ## Packages
 
@@ -10,7 +11,8 @@ Browse `packages/` for package source and documentation, or use:
 easybar widgets search
 ```
 
-Each package is independently versioned and contains a `package.toml` manifest.
+Each package is independently versioned and contains a manifest-version-2 `package.toml`. Packages
+declare `minimum_easybar_kit_version`; manifest version 1 is not accepted. The clean split starts at EasyBarKit `0.54.0`, so current official package releases require at least that version.
 
 Widget packages declare one entrypoint. Library packages declare exported module names. Dependencies are resolved from package manifests.
 
@@ -26,10 +28,11 @@ The package validator rejects invalid dependency constraints and requires all of
 library to have a jointly satisfiable version range. This matches EasyBar's one active version per
 library dependency model and catches incompatible shared-library requirements before merge or release.
 
-By default, tests use the EasyBar Lua API and JSON implementation from a sibling EasyBar checkout. Override its location with:
+By default, tests use the Lua API and JSON implementation from a sibling EasyBarKit checkout.
+Override its location with:
 
 ```sh
-make check EASYBAR_ROOT=/path/to/easybar
+make check EASYBAR_KIT_ROOT=/path/to/easybar-kit
 ```
 
 Focused package tests live under:
@@ -99,4 +102,4 @@ make check
 
 before opening a pull request.
 
-See the [EasyBar widget contribution guide](https://easybar.dev/lua/guides/contributing-widget/) for package layout, metadata, testing, and publishing requirements.
+See the [Widget Store contribution guide](https://easybar.dev/widget-store/create-and-contribute/) for package layout, metadata, testing, and publishing requirements.

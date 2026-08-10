@@ -2,14 +2,14 @@
 
 local M = {}
 
-function M.configure(root, easybar_root)
+function M.configure(root, easybar_kit_root)
 	package.path = table.concat({
 		root .. "/packages/brew-policy/?.lua",
 		root .. "/packages/shared/?.lua",
 		root .. "/packages/shared/?/init.lua",
 		root .. "/packages/?.lua",
-		easybar_root .. "/Sources/EasyBarApp/Lua/?.lua",
-		easybar_root .. "/Sources/EasyBarApp/Lua/?/init.lua",
+		easybar_kit_root .. "/Sources/EasyBarKit/Lua/?.lua",
+		easybar_kit_root .. "/Sources/EasyBarKit/Lua/?/init.lua",
 		package.path,
 	}, ";")
 end

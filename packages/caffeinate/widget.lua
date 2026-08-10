@@ -137,9 +137,9 @@ local function render()
 			font = {
 				size = 20,
 			},
-			padding_right = 0,
 			offset_y = -1,
 		},
+		spacing = 0,
 		label = {
 			string = "",
 		},
@@ -314,7 +314,7 @@ widget = easybar.add(easybar.kind.item, "caffeinate", {
 		},
 	},
 	popup = {
-		drawing = "on",
+		drawing = true,
 		background = {
 			color = COLORS.popup_bg,
 			border_color = COLORS.border,
@@ -328,7 +328,7 @@ widget = easybar.add(easybar.kind.item, "caffeinate", {
 })
 
 popup_label = easybar.add(easybar.kind.item, "caffeinate_popup_label", {
-	position = "popup." .. widget.name,
+	position = "popup." .. widget.id,
 	label = {
 		string = "Caffeinate · Off",
 		color = COLORS.muted,

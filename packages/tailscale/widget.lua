@@ -383,7 +383,7 @@ local function render(snapshot)
 	})
 
 	popup_exit_node_label:set({
-		drawing = snapshot.tailscale_connected and "on" or "off",
+		drawing = snapshot.tailscale_connected,
 		label = {
 			string = snapshot.exit_node_detail,
 			color = exit_node_color,
@@ -505,7 +505,7 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 		},
 	},
 	popup = {
-		drawing = "on",
+		drawing = true,
 		background = {
 			color = COLORS.popup_bg,
 			border_color = COLORS.border,
@@ -523,7 +523,7 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 })
 
 popup_label = easybar.add(easybar.kind.item, "tailscale_popup_label", {
-	position = "popup." .. tailscale_icon.name,
+	position = "popup." .. tailscale_icon.id,
 	label = {
 		string = "",
 		color = COLORS.text,
@@ -531,8 +531,8 @@ popup_label = easybar.add(easybar.kind.item, "tailscale_popup_label", {
 })
 
 popup_exit_node_label = easybar.add(easybar.kind.item, "tailscale_popup_exit_node_label", {
-	position = "popup." .. tailscale_icon.name,
-	drawing = "off",
+	position = "popup." .. tailscale_icon.id,
+	drawing = false,
 	label = {
 		string = "",
 		color = COLORS.muted,

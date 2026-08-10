@@ -344,7 +344,7 @@ gitlab = easybar.add(easybar.kind.item, "gitlab_work_items", {
 })
 
 popup_header = easybar.add(easybar.kind.item, "gitlab_work_items_header", {
-	position = "popup." .. gitlab.name,
+	position = "popup." .. gitlab.id,
 	order = 0,
 	drawing = true,
 	label = { string = "GitLab work items", color = COLORS.accent },
@@ -354,7 +354,7 @@ popup_header = easybar.add(easybar.kind.item, "gitlab_work_items_header", {
 
 for index = 1, MAX_POPUP_ITEMS do
 	popup_rows[index] = easybar.add(easybar.kind.item, "gitlab_work_item_" .. tostring(index), {
-		position = "popup." .. gitlab.name,
+		position = "popup." .. gitlab.id,
 		order = index,
 		drawing = false,
 		label = { string = "", color = COLORS.text },
@@ -370,7 +370,7 @@ for index = 1, MAX_POPUP_ITEMS do
 end
 
 popup_footer = easybar.add(easybar.kind.item, "gitlab_work_items_footer", {
-	position = "popup." .. gitlab.name,
+	position = "popup." .. gitlab.id,
 	order = MAX_POPUP_ITEMS + 1,
 	drawing = true,
 	label = { string = "Click an item to open it · Right-click to refresh", color = COLORS.muted },

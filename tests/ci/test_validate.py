@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -84,6 +85,45 @@ class DependencyCompatibilityTests(unittest.TestCase):
     def test_incompatible_exact_versions_are_rejected(self) -> None:
         constraints = [constraint("1.2.3"), constraint("1.2.4")]
         self.assertFalse(validate.constraints_are_compatible(constraints))
+
+
+class ManifestContractTests(unittest.TestCase):
+    def make_package(self) -> tuple[tempfile.TemporaryDirectory[str], Path, dict]:
+        temporary = tempfile.TemporaryDirectory()
+        package_dir = Path(temporary.name) / "demo"
+        package_dir.mkdir()
+        (package_dir / "README.md").write_text("# Demo\n", encoding="utf-8")
+        (package_dir / "widget.lua").write_text("return nil\n", encoding="utf-8")
+        manifest = {
+            "manifest_version": 2,
+            "name": "demo",
+            "version": "1.0.0",
+            "minimum_easybar_kit_version": "0.50.0",
+            "kind": "widget",
+            "description": "Demo widget",
+            "license": "Apache-2.0",
+            "readme": "README.md",
+            "categories": ["utilities"],
+            "entrypoint": "widget.lua",
+            "repository": {
+                "url": "https://github.com/easybar-app/widgets",
+                "path": "packages/demo",
+            },
+        }
+        return temporary, package_dir, manifest
+
+    def test_manifest_version_two_is_valid(self) -> None:
+        temporary, package_dir, manifest = self.make_package()
+        with temporary:
+            validate.validate_manifest("demo", package_dir, manifest, {"demo"})
+
+    def test_unsupported_manifest_field_is_rejected(self) -> None:
+        temporary, package_dir, manifest = self.make_package()
+        manifest["minimum_easybar_version"] = "0.40.0"
+        with temporary, self.assertRaisesRegex(
+            ValueError, "unsupported manifest fields: minimum_easybar_version"
+        ):
+            validate.validate_manifest("demo", package_dir, manifest, {"demo"})
 
 
 if __name__ == "__main__":

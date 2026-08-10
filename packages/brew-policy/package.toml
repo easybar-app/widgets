@@ -1,10 +1,10 @@
-manifest_version = 1
+manifest_version = 2
 name = "brew-policy"
-version = "0.1.0"
+version = "0.1.1"
 kind = "library"
 description = "Shared Homebrew manual-upgrade policy for EasyBar widgets."
 license = "Apache-2.0"
-minimum_easybar_version = "0.41.0"
+minimum_easybar_kit_version = "0.54.0"
 readme = "README.md"
 categories = ["developer-tools", "library", "system"]
 

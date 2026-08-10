@@ -328,7 +328,7 @@ github = easybar.add(easybar.kind.item, "github_notifications", {
 })
 
 popup_header = easybar.add(easybar.kind.item, "github_notifications_header", {
-	position = "popup." .. github.name,
+	position = "popup." .. github.id,
 	order = 0,
 	drawing = true,
 	label = {
@@ -341,7 +341,7 @@ popup_header = easybar.add(easybar.kind.item, "github_notifications_header", {
 
 for index = 1, MAX_POPUP_ITEMS do
 	popup_rows[index] = easybar.add(easybar.kind.item, "github_notification_" .. tostring(index), {
-		position = "popup." .. github.name,
+		position = "popup." .. github.id,
 		order = index,
 		drawing = false,
 		label = {
@@ -360,7 +360,7 @@ for index = 1, MAX_POPUP_ITEMS do
 end
 
 popup_footer = easybar.add(easybar.kind.item, "github_notifications_footer", {
-	position = "popup." .. github.name,
+	position = "popup." .. github.id,
 	order = MAX_POPUP_ITEMS + 1,
 	drawing = true,
 	label = {

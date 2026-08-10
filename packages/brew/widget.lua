@@ -566,7 +566,7 @@ local function render_warning(order)
 	local detail_index = 0
 	for line in state.warning.raw:gmatch("[^\r\n]+") do
 		local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_warning_detail_" .. tostring(detail_index), {
-			position = "popup." .. warning_row.name,
+			position = "popup." .. warning_row.id,
 			order = detail_index,
 			label = {
 				string = line,
@@ -650,7 +650,7 @@ local function render_error(order)
 	for line in state.error.raw:gmatch("[^\r\n]+") do
 		if detail_index >= MAX_ERROR_DETAIL_LINES then
 			local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_error_detail_more", {
-				position = "popup." .. error_row.name,
+				position = "popup." .. error_row.id,
 				order = detail_index,
 				label = {
 					string = "… See " .. BREW_LOG_FILE_NAME .. " for complete output",
@@ -663,7 +663,7 @@ local function render_error(order)
 		end
 
 		local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_error_detail_" .. tostring(detail_index), {
-			position = "popup." .. error_row.name,
+			position = "popup." .. error_row.id,
 			order = detail_index,
 			label = {
 				string = line,
@@ -1351,7 +1351,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 })
 
 title_item = easybar.add(easybar.kind.item, ID_TITLE, {
-	position = "popup." .. brew_widget.name,
+	position = "popup." .. brew_widget.id,
 	order = POPUP_ORDER.title,
 	label = {
 		string = "Homebrew",
@@ -1363,7 +1363,7 @@ title_item = easybar.add(easybar.kind.item, ID_TITLE, {
 })
 
 summary_item = easybar.add(easybar.kind.item, ID_SUMMARY, {
-	position = "popup." .. brew_widget.name,
+	position = "popup." .. brew_widget.id,
 	order = POPUP_ORDER.summary,
 	label = {
 		string = "Checking outdated packages…",
@@ -1372,7 +1372,7 @@ summary_item = easybar.add(easybar.kind.item, ID_SUMMARY, {
 })
 
 time_item = easybar.add(easybar.kind.item, ID_TIME, {
-	position = "popup." .. brew_widget.name,
+	position = "popup." .. brew_widget.id,
 	order = POPUP_ORDER.time,
 	label = {
 		string = "Last checked: never",
@@ -1384,13 +1384,13 @@ time_item = easybar.add(easybar.kind.item, ID_TIME, {
 })
 
 actions_row = easybar.add(easybar.kind.row, ID_ACTIONS, {
-	position = "popup." .. brew_widget.name,
+	position = "popup." .. brew_widget.id,
 	order = POPUP_ORDER.actions,
 	spacing = 8,
 })
 
 upgrade_button = easybar.add(easybar.kind.item, ID_UPGRADE, {
-	parent = actions_row.name,
+	parent = actions_row.id,
 	order = 1,
 	label = {
 		string = "Upgrade now",
@@ -1400,7 +1400,7 @@ upgrade_button = easybar.add(easybar.kind.item, ID_UPGRADE, {
 })
 
 update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
-	parent = actions_row.name,
+	parent = actions_row.id,
 	order = 2,
 	label = {
 		string = "Update",

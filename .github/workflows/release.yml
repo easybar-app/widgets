@@ -15,17 +15,17 @@ jobs:
       - name: Checkout widgets
         uses: actions/checkout@v7
 
-      - name: Checkout EasyBar
+      - name: Checkout EasyBarKit
         uses: actions/checkout@v7
         with:
-          repository: easybar-app/easybar
-          path: easybar-source
+          repository: easybar-app/easybar-kit
+          path: easybar-kit-source
 
-      - name: Install Lua
-        run: easybar-source/scripts/ci/install-dependencies.sh lua
+      - name: Install development dependencies
+        run: easybar-kit-source/scripts/ci/install-dependencies.sh format
 
       - name: Validate packages and run tests
-        run: make check EASYBAR_ROOT=easybar-source
+        run: make check EASYBAR_KIT_ROOT=easybar-kit-source
 
       - name: Resolve package tag
         id: package

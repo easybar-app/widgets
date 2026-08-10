@@ -5,8 +5,8 @@ local configured_root
 local json
 local inbox_module
 
-local function configure(root, easybar_root)
-	local configuration_key = root .. "\0" .. easybar_root
+local function configure(root, easybar_kit_root)
+	local configuration_key = root .. "\0" .. easybar_kit_root
 	if configured_root == configuration_key then
 		return
 	end
@@ -16,8 +16,8 @@ local function configure(root, easybar_root)
 		root .. "/packages/shared/?.lua",
 		root .. "/packages/shared/?/init.lua",
 		root .. "/packages/?.lua",
-		easybar_root .. "/Sources/EasyBarApp/Lua/?.lua",
-		easybar_root .. "/Sources/EasyBarApp/Lua/?/init.lua",
+		easybar_kit_root .. "/Sources/EasyBarKit/Lua/?.lua",
+		easybar_kit_root .. "/Sources/EasyBarKit/Lua/?/init.lua",
 		package.path,
 	}, ";")
 
@@ -374,8 +374,8 @@ local function make_host(root, package_name, initial_storage_values)
 	return easybar, state
 end
 
-function M.load(root, easybar_root, package_name, initial_storage_values)
-	configure(root, easybar_root)
+function M.load(root, easybar_kit_root, package_name, initial_storage_values)
+	configure(root, easybar_kit_root)
 	local easybar, state = make_host(root, package_name, initial_storage_values)
 	local path = root .. "/packages/" .. package_name .. "/widget.lua"
 	local environment = setmetatable({ easybar = easybar }, { __index = _G })
@@ -386,8 +386,8 @@ function M.load(root, easybar_root, package_name, initial_storage_values)
 	return state
 end
 
-function M.modules(root, easybar_root)
-	configure(root, easybar_root)
+function M.modules(root, easybar_kit_root)
+	configure(root, easybar_kit_root)
 	return json, inbox_module
 end
 

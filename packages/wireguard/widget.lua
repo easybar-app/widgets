@@ -216,7 +216,7 @@ wireguard = easybar.add(easybar.kind.group, "wireguard", {
 })
 
 wireguard_icon = easybar.add(easybar.kind.item, "wireguard_icon", {
-	parent = wireguard.name,
+	parent = wireguard.id,
 	icon = {
 		string = VPN_ICON,
 		color = COLORS.muted,
@@ -227,7 +227,7 @@ wireguard_icon = easybar.add(easybar.kind.item, "wireguard_icon", {
 })
 
 wireguard_popup_label = easybar.add(easybar.kind.item, "wireguard_popup_label", {
-	position = "popup." .. wireguard.name,
+	position = "popup." .. wireguard.id,
 	label = {
 		string = "",
 		color = COLORS.muted,
