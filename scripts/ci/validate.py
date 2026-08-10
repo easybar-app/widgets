@@ -7,6 +7,8 @@ import argparse
 import re
 import sys
 import tomllib
+from dataclasses import dataclass
+from functools import total_ordering
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,6 +20,112 @@ ASSET_LITERAL = re.compile(r'easybar\.asset\("([^"@][^"]*)"\)')
 
 def fail(message: str) -> None:
     raise ValueError(message)
+
+
+@total_ordering
+@dataclass(frozen=True)
+class SemanticVersion:
+    """Semantic version ordering matching EasyBar's package resolver."""
+
+    major: int
+    minor: int
+    patch: int
+    prerelease: tuple[str, ...] = ()
+
+    @classmethod
+    def parse(cls, value: str) -> SemanticVersion | None:
+        version = value.split("+", 1)[0]
+        core_and_prerelease = version.split("-", 1)
+        core = core_and_prerelease[0].split(".")
+        if len(core) != 3:
+            return None
+
+        try:
+            major, minor, patch = (int(part) for part in core)
+        except ValueError:
+            return None
+        if min(major, minor, patch) < 0:
+            return None
+
+        prerelease: tuple[str, ...] = ()
+        if len(core_and_prerelease) == 2:
+            prerelease = tuple(core_and_prerelease[1].split("."))
+            if not prerelease or any(not part for part in prerelease):
+                return None
+
+        return cls(major, minor, patch, prerelease)
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, SemanticVersion):
+            return NotImplemented
+
+        left_core = (self.major, self.minor, self.patch)
+        right_core = (other.major, other.minor, other.patch)
+        if left_core != right_core:
+            return left_core < right_core
+        if not self.prerelease:
+            return False
+        if not other.prerelease:
+            return True
+
+        for left, right in zip(self.prerelease, other.prerelease):
+            if left == right:
+                continue
+            left_number = int(left) if left.isdigit() else None
+            right_number = int(right) if right.isdigit() else None
+            if left_number is not None and right_number is not None:
+                return left_number < right_number
+            if left_number is not None:
+                return True
+            if right_number is not None:
+                return False
+            return left < right
+
+        return len(self.prerelease) < len(other.prerelease)
+
+    def __str__(self) -> str:
+        core = f"{self.major}.{self.minor}.{self.patch}"
+        return core if not self.prerelease else core + "-" + ".".join(self.prerelease)
+
+
+@dataclass(frozen=True)
+class VersionConstraint:
+    """Exact or caret dependency constraint matching EasyBar's manifest parser."""
+
+    raw_value: str
+    exact: SemanticVersion | None
+    minimum: SemanticVersion | None
+    maximum: SemanticVersion | None
+
+    @classmethod
+    def parse(cls, raw_value: str) -> VersionConstraint | None:
+        trimmed = raw_value.strip()
+        if not trimmed:
+            return None
+
+        if trimmed.startswith("^"):
+            minimum = SemanticVersion.parse(trimmed[1:])
+            if minimum is None:
+                return None
+            if minimum.major > 0:
+                maximum = SemanticVersion(minimum.major + 1, 0, 0)
+            elif minimum.minor > 0:
+                maximum = SemanticVersion(0, minimum.minor + 1, 0)
+            else:
+                maximum = SemanticVersion(0, 0, minimum.patch + 1)
+            return cls(trimmed, None, minimum, maximum)
+
+        exact = SemanticVersion.parse(trimmed.lstrip("= "))
+        if exact is None:
+            return None
+        return cls(trimmed, exact, None, None)
+
+    def contains(self, version: SemanticVersion) -> bool:
+        if self.exact is not None:
+            return self.exact == version
+        assert self.minimum is not None
+        assert self.maximum is not None
+        return self.minimum <= version < self.maximum
 
 
 def safe_file(package_dir: Path, relative: object, label: str) -> Path:
@@ -105,6 +213,11 @@ def validate_manifest(name: str, package_dir: Path, manifest: dict, names: set[s
             fail(f"{name}: package cannot depend on itself")
         if not isinstance(constraint, str) or not constraint:
             fail(f"{name}: dependency {dependency} needs a version constraint")
+        if VersionConstraint.parse(constraint) is None:
+            fail(
+                f"{name}: invalid dependency constraint for {dependency}: {constraint!r}; "
+                "expected an exact version or caret constraint"
+            )
 
     repository = manifest.get("repository", {})
     expected_path = f"packages/{name}"
@@ -149,6 +262,51 @@ def validate_dependency_kinds(manifests: dict[str, tuple[Path, dict]]) -> None:
                 )
 
 
+def constraints_are_compatible(constraints: list[VersionConstraint]) -> bool:
+    """Return whether one semantic version can satisfy every constraint."""
+
+    exact_versions = [constraint.exact for constraint in constraints if constraint.exact]
+    if exact_versions:
+        candidate = exact_versions[0]
+        return all(version == candidate for version in exact_versions) and all(
+            constraint.contains(candidate) for constraint in constraints
+        )
+
+    minimum = max(
+        constraint.minimum for constraint in constraints if constraint.minimum is not None
+    )
+    maximum = min(
+        constraint.maximum for constraint in constraints if constraint.maximum is not None
+    )
+    return minimum < maximum
+
+
+def validate_dependency_compatibility(manifests: dict[str, tuple[Path, dict]]) -> None:
+    """Require one satisfiable version range for every shared library dependency."""
+
+    requirements: dict[str, list[tuple[str, VersionConstraint]]] = {}
+    for consumer, (_, manifest) in manifests.items():
+        for dependency, raw_constraint in manifest.get("dependencies", {}).items():
+            constraint = VersionConstraint.parse(raw_constraint)
+            assert constraint is not None
+            requirements.setdefault(dependency, []).append((consumer, constraint))
+
+    for dependency, consumers in sorted(requirements.items()):
+        constraints = [constraint for _, constraint in consumers]
+        if constraints_are_compatible(constraints):
+            continue
+
+        detail = "\n".join(
+            f"  {consumer} requires {constraint.raw_value}"
+            for consumer, constraint in sorted(consumers)
+        )
+        fail(
+            f"dependency compatibility conflict for library '{dependency}':\n"
+            f"{detail}\n"
+            f"no single version of '{dependency}' satisfies all official package requirements"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--print-widgets", action="store_true")
@@ -160,6 +318,7 @@ def main() -> int:
             validate_manifest(name, package_dir, manifest, names)
         validate_dependency_kinds(manifests)
         validate_cycles(manifests)
+        validate_dependency_compatibility(manifests)
     except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
         print(f"Package validation failed: {error}", file=sys.stderr)
         return 1

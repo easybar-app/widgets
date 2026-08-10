@@ -22,6 +22,10 @@ Run all checks with:
 make check
 ```
 
+The package validator rejects invalid dependency constraints and requires all official consumers of a
+library to have a jointly satisfiable version range. This matches EasyBar's one active version per
+library dependency model and catches incompatible shared-library requirements before merge or release.
+
 By default, tests use the EasyBar Lua API and JSON implementation from a sibling EasyBar checkout. Override its location with:
 
 ```sh

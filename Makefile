@@ -12,7 +12,7 @@ TAPLO_SOURCES := .stylua.toml "packages/**/*.toml"
 
 .DEFAULT_GOAL := help
 
-.PHONY: help fmt fmt-lua fmt-md fmt-yaml fmt-json fmt-toml lint-lua check validate check-lua package bump release
+.PHONY: help fmt fmt-lua fmt-md fmt-yaml fmt-json fmt-toml lint-lua check validate test-validator check-lua package bump release
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z\_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
@@ -41,10 +41,13 @@ lint-lua: ## Check Lua formatting with StyLua.
 
 ##@ Validation
 
-check: validate check-lua ## Validate packages and run Lua checks.
+check: validate test-validator check-lua ## Validate packages and run Lua checks.
 
-validate: ## Validate all package manifests.
+validate: ## Validate package manifests and dependency compatibility.
 	@$(PYTHON) scripts/ci/validate.py
+
+test-validator: ## Run package validator regression tests.
+	@$(PYTHON) -m unittest discover -s tests/ci -p 'test_*.py'
 
 check-lua: ## Check Lua syntax and run package tests.
 	@LUA="$(LUA)" EASYBAR_ROOT="$(EASYBAR_ROOT)" scripts/ci/check.sh
@@ -66,3 +69,5 @@ release: ## Validate and publish one package with PACKAGE=name.
 	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)"
 	@$(MAKE) check
 	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)" --publish
+
+
