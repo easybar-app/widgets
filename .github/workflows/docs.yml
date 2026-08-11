@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "packages/**/README.md"
+      - "packages/**/package.toml"
   workflow_dispatch:
 
 permissions:
