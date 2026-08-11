@@ -1,12 +1,12 @@
 # EasyBar Widgets Inbox
 
-`widget.lua` checks the official EasyBar widget registry and publishes available package updates to EasyBar's native inbox.
+`widget.lua` checks the official widget registry and publishes available package updates to the native inbox in EasyBar or EasyBar Native.
 
 Use **Update** on an inbox item to install that package's latest registry release. Use **Refresh**
 from the Widgets source menu—or the inbox refresh button—to check immediately. The source menu
 also provides **Update all** when updates are available; checks run every six hours and after wake
-or session activation. Update actions use `easybar widgets update`, so the same behavior is
-available from the terminal.
+or session activation. Update actions use the CLI for the active frontend, so the same behavior is
+available from the terminal with `easybar widgets update` or `easybar-native widgets update`.
 
 ## Configuration
 
@@ -19,10 +19,14 @@ source_order = 40
 context_order = 40
 ```
 
-Reload EasyBar after changing it:
+Reload the frontend after changing it:
 
 ```sh
+# EasyBar
 easybar config reload
+
+# EasyBar Native
+easybar-native config reload
 ```
 
 `source_order` controls the Widgets group when the inbox is grouped by source. `context_order`
@@ -31,12 +35,6 @@ context menu shows update availability followed by the active refresh interval, 
 
 Only packages whose recorded installation source matches a release in the official registry are checked. Packages installed from a local directory, custom archive, or another registry are left untouched.
 
-If you installed the former `inbox-widget-updates` 0.1.0 package, remove it before installing this renamed package:
-
-```sh
-easybar widgets uninstall inbox-widget-updates
-```
-
 ## Requirements
 
-The widget requires EasyBar 0.49.0 or newer, plus `curl` and the `easybar` CLI in `[app.env].PATH`.
+The widget requires EasyBarKit 0.3.2 or newer and `curl`. The active frontend CLI must be available in `[app.env].PATH` so inbox actions can install updates.

@@ -2,9 +2,9 @@ manifest_version = 2
 name = "inbox-widgets"
 version = "0.7.6"
 kind = "widget"
-description = "EasyBar package updates in the native inbox."
+description = "Widget package updates in the native inbox."
 license = "Apache-2.0"
-minimum_easybar_kit_version = "0.1.0"
+minimum_easybar_kit_version = "0.3.2"
 entrypoint = "widget.lua"
 readme = "README.md"
 categories = ["inbox", "system", "utilities"]
@@ -17,7 +17,7 @@ path = "packages/inbox-widgets"
 shared = "^0.1.0"
 
 [requirements]
-commands = ["curl", "easybar"]
+commands = ["curl"]
 native_inbox = true
 
 [[settings]]

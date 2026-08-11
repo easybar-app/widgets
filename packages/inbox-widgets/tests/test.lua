@@ -4,8 +4,11 @@ local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 local registry_url = "https://raw.githubusercontent.com/easybar-app/registry/main/index.json"
 
 --- Loads the widget with controlled storage values and returns its test state.
-local function load_widget(storage_values)
-	return host.load(root, easybar_root, "inbox-widgets", storage_values)
+local function load_widget(storage_values, cli_name)
+	return host.load(root, easybar_root, "inbox-widgets", storage_values, {
+		EASYBAR_INTERNAL_CLI_NAME = cli_name or "easybar",
+		EASYBAR_INTERNAL_WIDGET_PACKAGES_DIRECTORY = "/tmp/easybar/packages/active",
+	})
 end
 
 --- Completes both asynchronous data reads for one widget refresh.
@@ -17,6 +20,23 @@ local function complete_refresh(state, installed_fixture, registry_fixture)
 	)
 	state:complete_next_command(registry_fixture, 0)
 	state:run_next_timer()
+end
+
+--- Verifies EasyBar Native updates use its isolated database and CLI.
+local function test_native_frontend_uses_native_package_runtime()
+	local state = load_widget(nil, "easybar-native")
+	state:run_next_timer()
+	assert(
+		state.commands[1].command[2] == "/tmp/easybar/packages/installed.json",
+		"the installed database must be resolved from the active package directory"
+	)
+	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
+
+	state.action_handler({ action_id = "update", target_widget_id = "package:brew" })
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar-native widgets update brew",
+		"Native update actions must use the easybar-native CLI"
+	)
 end
 
 --- Verifies registry updates are found while local-only packages are ignored.
@@ -132,6 +152,7 @@ local function test_configures_the_refresh_interval()
 end
 
 test_finds_registry_updates_and_ignores_local_packages()
+test_native_frontend_uses_native_package_runtime()
 test_update_runs_the_package_updater_and_rechecks()
 test_update_all_uses_the_cli_update_command()
 test_invalid_registry_retains_the_last_snapshot()

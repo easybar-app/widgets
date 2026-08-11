@@ -374,11 +374,20 @@ local function make_host(root, package_name, initial_storage_values)
 	return easybar, state
 end
 
-function M.load(root, easybar_kit_root, package_name, initial_storage_values)
+--- Loads one widget with isolated host state and optional process-environment overrides.
+function M.load(root, easybar_kit_root, package_name, initial_storage_values, environment_values)
 	configure(root, easybar_kit_root)
 	local easybar, state = make_host(root, package_name, initial_storage_values)
 	local path = root .. "/packages/" .. package_name .. "/widget.lua"
-	local environment = setmetatable({ easybar = easybar }, { __index = _G })
+	local runtime_os = setmetatable({
+		getenv = function(name)
+			if environment_values ~= nil and environment_values[name] ~= nil then
+				return environment_values[name]
+			end
+			return os.getenv(name)
+		end,
+	}, { __index = os })
+	local environment = setmetatable({ easybar = easybar, os = runtime_os }, { __index = _G })
 	local chunk, load_error = loadfile(path, "t", environment)
 	assert(chunk, package_name .. " failed to load: " .. tostring(load_error))
 	local ok, runtime_error = pcall(chunk)

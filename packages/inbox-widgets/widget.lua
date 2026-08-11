@@ -1,4 +1,4 @@
--- EasyBar package updates in the native inbox.
+-- Widget package updates in the native inbox.
 
 local inbox = require("inbox")
 local retry = require("retry")
@@ -71,7 +71,16 @@ if refresh_interval_minutes ~= configured_refresh_interval then
 	)
 end
 
---- Returns the path to EasyBar's installed-package database.
+--- Returns the active frontend CLI name exposed by EasyBarKit.
+local function frontend_cli_name()
+	local name = os.getenv("EASYBAR_INTERNAL_CLI_NAME")
+	if type(name) ~= "string" or name == "" then
+		return nil
+	end
+	return name
+end
+
+--- Returns the path to the active frontend's installed-package database.
 local function installed_database_path()
 	local active_directory = os.getenv("EASYBAR_INTERNAL_WIDGET_PACKAGES_DIRECTORY")
 	if type(active_directory) == "string" and active_directory ~= "" then
@@ -81,11 +90,7 @@ local function installed_database_path()
 		end
 	end
 
-	local home = os.getenv("HOME")
-	if type(home) ~= "string" or home == "" then
-		return nil
-	end
-	return home .. "/.local/share/easybar/packages/installed.json"
+	return nil
 end
 
 --- Decodes a JSON object or returns a source-specific validation error.
@@ -372,7 +377,7 @@ refresh = function(reason, activity_item_id)
 	if database_path == nil then
 		state.error = {
 			title = "Could not check package updates",
-			message = "Could not resolve EasyBar's package directory",
+			message = "Could not resolve the active frontend's package directory",
 			timestamp = os.time(),
 		}
 		publish()
@@ -439,7 +444,7 @@ refresh = function(reason, activity_item_id)
 	end)
 end
 
---- Runs an EasyBar package update command and refreshes the resulting snapshot.
+--- Runs an active-frontend package update command and refreshes the resulting snapshot.
 local function run_update(arguments, title, item_id)
 	if state.operation ~= nil then
 		return
@@ -455,11 +460,12 @@ local function run_update(arguments, title, item_id)
 
 	easybar.spawn_async(arguments, EXEC.update, function(output, code)
 		if code ~= 0 then
+			local cli_name = frontend_cli_name() or "frontend CLI"
 			fail_operation(
 				operation,
 				"Could not update widgets",
 				output,
-				"easybar widgets update exited with code " .. tostring(code)
+				cli_name .. " widgets update exited with code " .. tostring(code)
 			)
 			return
 		end
@@ -471,12 +477,20 @@ end
 
 --- Updates the package represented by one inbox item.
 local function update_package(package)
-	run_update({ "/usr/bin/env", "easybar", "widgets", "update", package.name }, "Updating " .. package.name, package.id)
+	local cli_name = frontend_cli_name()
+	if cli_name == nil then
+		return
+	end
+	run_update({ "/usr/bin/env", cli_name, "widgets", "update", package.name }, "Updating " .. package.name, package.id)
 end
 
 --- Updates every installed package that has a newer registry release.
 local function update_all_packages()
-	run_update({ "/usr/bin/env", "easybar", "widgets", "update", "--all" }, "Updating all widgets", nil)
+	local cli_name = frontend_cli_name()
+	if cli_name == nil then
+		return
+	end
+	run_update({ "/usr/bin/env", cli_name, "widgets", "update", "--all" }, "Updating all widgets", nil)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
