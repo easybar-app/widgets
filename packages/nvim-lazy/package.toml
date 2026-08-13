@@ -1,0 +1,30 @@
+manifest_version = 2
+name = "nvim-lazy"
+version = "0.1.0"
+kind = "widget"
+description = "Available lazy.nvim plugin updates in a standalone status item."
+license = "Apache-2.0"
+minimum_easybar_kit_version = "0.1.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/nvim-lazy"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["nvim"]
+optional_environment = ["NVIM"]
+
+[[settings]]
+namespace = "nvim-lazy"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 1
+maximum = 1440
+default = 60
+description = "Minutes between automatic lazy.nvim update checks."
