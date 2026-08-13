@@ -1,0 +1,36 @@
+local root = assert(arg[1], "repository root argument is required")
+local easybar_root = assert(arg[2], "EasyBar repository root argument is required")
+local host = assert(loadfile(root .. "/tests/support/widget_host.lua"))()
+host.configure(root, easybar_root)
+
+local easybar, state = host.new(root)
+local environment = setmetatable({ easybar = easybar }, { __index = _G })
+local path = root .. "/packages/nvim-mason/widget.lua"
+local chunk, load_error = loadfile(path, "t", environment)
+assert(chunk, "nvim-mason/widget.lua failed to load: " .. tostring(load_error))
+local ok, runtime_error = pcall(chunk)
+assert(ok, "nvim-mason/widget.lua failed during startup: " .. tostring(runtime_error))
+
+local widget = assert(state:node("nvim_mason_updates"), "Mason widget must create nvim_mason_updates")
+local popup = assert(state:node("nvim_mason_updates_popup_status"), "Mason widget must create its popup")
+assert(#state.commands == 1, "Mason widget must start one initial update check")
+assert(state:command_contains(1, "nvim"), "Mason widget must invoke Neovim")
+assert(state:command_contains(1, "--headless"), "Mason widget must run Neovim headlessly")
+local lua_command = assert(state.commands[1].command[4]):match("^lua%s+(.+)$")
+assert(load(lua_command), "Mason widget must pass valid Lua to Neovim")
+assert(widget.props.icon.string == "󰑐", "Mason widget must show a refresh icon while checking")
+
+state:complete_command(1, "EASYBAR_NVIM_MASON_UPDATES=2\n", 0)
+assert(widget.props.icon.string == "󰢛", "Mason widget must restore its Mason icon")
+assert(widget.props.label.string == "2", "Mason widget must render the update count")
+assert(popup.props.label.string == "Mason · 2 updates available")
+
+state:emit("nvim_mason_updates", easybar.events.mouse.clicked, { button = easybar.events.mouse.left_button })
+state:emit("nvim_mason_updates", easybar.events.mouse.clicked, { button = easybar.events.mouse.left_button })
+assert(#state.commands == 2, "Mason widget must coalesce overlapping checks")
+state:complete_command(2, "EASYBAR_NVIM_MASON_ERROR=registry unavailable\n", 1)
+assert(#state.commands == 3, "Mason widget must run one coalesced follow-up check")
+state:complete_command(3, "EASYBAR_NVIM_MASON_UPDATES=0\n", 0)
+assert(widget.props.label.string == "", "Mason widget must hide a zero count")
+
+print("mason.nvim widget regression checks passed")
