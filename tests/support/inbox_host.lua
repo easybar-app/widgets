@@ -213,6 +213,25 @@ local function decoded_fixture(value)
 		})
 	elseif value == "lazy-updates-empty" then
 		return json.array({})
+	elseif value == "mason-updates-two" then
+		return json.array({
+			json.object({
+				name = "lua-language-server",
+				installed = "3.18.2",
+				latest = "3.19.0",
+				homepage = "https://github.com/LuaLS/lua-language-server",
+				categories = json.array({ "LSP" }),
+			}),
+			json.object({
+				name = "stylua",
+				installed = "2.1.0",
+				latest = "2.2.0",
+				homepage = "https://github.com/JohnnyMorganz/StyLua",
+				categories = json.array({ "Formatter" }),
+			}),
+		})
+	elseif value == "mason-updates-empty" then
+		return json.array({})
 	end
 
 	error("unexpected JSON fixture: " .. tostring(value))
