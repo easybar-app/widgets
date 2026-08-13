@@ -1,0 +1,49 @@
+manifest_version = 2
+name = "inbox-nvim-lazy"
+version = "0.1.0"
+kind = "widget"
+description = "lazy.nvim plugin updates and actions in EasyBar's native inbox."
+license = "Apache-2.0"
+minimum_easybar_kit_version = "0.1.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "inbox", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/inbox-nvim-lazy"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["nvim"]
+optional_environment = ["NVIM"]
+native_inbox = true
+
+[[settings]]
+namespace = "nvim-lazy-inbox"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 5
+maximum = 10080
+default = 60
+description = "Minutes between automatic lazy.nvim update checks."
+
+[[settings]]
+namespace = "nvim-lazy-inbox"
+key = "source_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 35
+description = "Order of the lazy.nvim group when the inbox is grouped by source."
+
+[[settings]]
+namespace = "nvim-lazy-inbox"
+key = "context_order"
+type = "integer"
+minimum = -10000
+maximum = 10000
+default = 35
+description = "Order of lazy.nvim in the inbox source context menu."

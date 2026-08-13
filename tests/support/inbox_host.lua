@@ -196,6 +196,23 @@ local function decoded_fixture(value)
 		})
 	elseif value == "inbox-widgets-malformed" then
 		return json.object({ registry_version = 1, packages = json.object({}) })
+	elseif value == "lazy-updates-two" then
+		return json.array({
+			json.object({
+				name = "lazy.nvim",
+				from = "0123456789abcdef",
+				to = "fedcba9876543210",
+				url = "https://github.com/folke/lazy.nvim.git",
+			}),
+			json.object({
+				name = "plenary.nvim",
+				from = "1111111111111111",
+				to = "2222222222222222",
+				url = "https://github.com/nvim-lua/plenary.nvim.git",
+			}),
+		})
+	elseif value == "lazy-updates-empty" then
+		return json.array({})
 	end
 
 	error("unexpected JSON fixture: " .. tostring(value))

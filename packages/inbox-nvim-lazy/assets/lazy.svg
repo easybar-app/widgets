@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-labelledby="title">
+  <title id="title">lazy.nvim</title>
+  <path fill="currentColor" d="M13.8 2.2a7.9 7.9 0 1 0 4 12.8 8.4 8.4 0 0 1-2.2.3A8.1 8.1 0 0 1 7.5 7.2c0-2 .7-3.7 1.9-5a7.8 7.8 0 0 0 4.4 0Z"/>
+  <path fill="currentColor" d="m14.8 4 .5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5.5-1.4Zm2.4 4.3.3.9.9.3-.9.3-.3.9-.3-.9-.9-.3.9-.3.3-.9Z"/>
+</svg>
