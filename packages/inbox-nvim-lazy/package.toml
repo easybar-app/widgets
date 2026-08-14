@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "inbox-nvim-lazy"
-version = "0.1.0"
+version = "0.2.0"
 kind = "widget"
 description = "lazy.nvim plugin updates and actions in EasyBar's native inbox."
 license = "Apache-2.0"
