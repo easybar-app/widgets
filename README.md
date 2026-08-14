@@ -36,6 +36,7 @@ behavior.
 - Python 3.11 or newer
 - A sibling EasyBarKit checkout, or `EASYBAR_KIT_ROOT` pointing to one
 - `fzf` for the interactive multi-package release wizard
+- GitHub CLI (`gh`) authenticated with access to the widgets and registry repositories
 
 Run the complete validation suite before opening a pull request:
 
@@ -51,8 +52,9 @@ make release-wizard
 
 The wizard discovers `packages/*/package.toml`, lets you select packages with `fzf`, asks for a patch,
 minor, or major bump for each selection, validates the repository, commits and pushes each manifest
-bump independently, and publishes the corresponding package tag. The existing tag workflow creates
-the GitHub release and deterministic archive.
+bump independently, and publishes the corresponding package tag. It then waits for every package
+release workflow to finish successfully, synchronizes `easybar-app/registry`, waits for that sync, and
+finally triggers the documentation rebuild.
 
 ## Documentation
 
@@ -64,3 +66,4 @@ the GitHub release and deterministic archive.
 ## License
 
 Licensed under the [Apache License 2.0](./LICENSE).
+

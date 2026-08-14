@@ -10,6 +10,14 @@ cd "$repo_root"
 prompt_input="${RELEASE_WIZARD_INPUT:-/dev/tty}"
 exec 3<"$prompt_input"
 
+WIDGETS_REPOSITORY="easybar-app/widgets"
+REGISTRY_REPOSITORY="easybar-app/registry"
+RELEASE_WORKFLOW="release.yml"
+REGISTRY_WORKFLOW="sync.yml"
+DOCS_WORKFLOW="docs.yml"
+WORKFLOW_DISCOVERY_ATTEMPTS=60
+WORKFLOW_DISCOVERY_DELAY_SECONDS=2
+
 require_command() {
   local command_name="$1"
 
@@ -43,6 +51,13 @@ require_clean_main() {
   remote_head="$(git rev-parse origin/main)"
   if [ "$head" != "$remote_head" ]; then
     echo "Local main must exactly match origin/main before starting the release wizard." >&2
+    exit 1
+  fi
+}
+
+require_gh_authentication() {
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "GitHub CLI authentication is required. Run: gh auth login" >&2
     exit 1
   fi
 }
@@ -119,6 +134,87 @@ choose_level() {
   done
 }
 
+latest_workflow_run_id() {
+  local repository="$1"
+  local workflow="$2"
+  local event="${3:-}"
+  local arguments=(
+    run list
+    --repo "$repository"
+    --workflow "$workflow"
+    --limit 1
+    --json databaseId
+    --jq '.[0].databaseId // empty'
+  )
+
+  if [ -n "$event" ]; then
+    arguments+=(--event "$event")
+  fi
+
+  gh "${arguments[@]}"
+}
+
+wait_for_release_workflow() {
+  local package="$1"
+  local tag="$2"
+  local commit_sha="$3"
+  local attempt
+  local run_id=""
+
+  printf '\n==> Waiting for release workflow: %s\n' "$tag"
+
+  for ((attempt = 1; attempt <= WORKFLOW_DISCOVERY_ATTEMPTS; attempt++)); do
+    run_id="$(
+      gh run list \
+        --repo "$WIDGETS_REPOSITORY" \
+        --workflow "$RELEASE_WORKFLOW" \
+        --event push \
+        --commit "$commit_sha" \
+        --limit 10 \
+        --json databaseId,headBranch \
+        --jq ".[] | select(.headBranch == \"$tag\") | .databaseId" |
+        head -n 1
+    )"
+
+    if [ -n "$run_id" ]; then
+      gh run watch "$run_id" --repo "$WIDGETS_REPOSITORY" --exit-status
+      return
+    fi
+
+    sleep "$WORKFLOW_DISCOVERY_DELAY_SECONDS"
+  done
+
+  echo "Could not find the release workflow for $package tag $tag at commit $commit_sha." >&2
+  exit 1
+}
+
+trigger_and_wait_for_workflow() {
+  local repository="$1"
+  local workflow="$2"
+  local label="$3"
+  local previous_run_id
+  local run_id=""
+  local attempt
+
+  previous_run_id="$(latest_workflow_run_id "$repository" "$workflow" workflow_dispatch)"
+
+  printf '\n==> Triggering %s\n' "$label"
+  gh workflow run "$workflow" --repo "$repository" --ref main
+
+  for ((attempt = 1; attempt <= WORKFLOW_DISCOVERY_ATTEMPTS; attempt++)); do
+    run_id="$(latest_workflow_run_id "$repository" "$workflow" workflow_dispatch)"
+    if [ -n "$run_id" ] && [ "$run_id" != "$previous_run_id" ]; then
+      gh run watch "$run_id" --repo "$repository" --exit-status
+      return
+    fi
+
+    sleep "$WORKFLOW_DISCOVERY_DELAY_SECONDS"
+  done
+
+  echo "Could not find the newly dispatched $label workflow run." >&2
+  exit 1
+}
+
 current_manifest=""
 restore_uncommitted_manifest() {
   local status=$?
@@ -133,9 +229,11 @@ restore_uncommitted_manifest() {
 trap restore_uncommitted_manifest EXIT
 
 require_command fzf
+require_command gh
 require_command git
 require_command make
 require_command scripts/support/python.sh
+require_gh_authentication
 require_clean_main
 
 if selection="$(select_packages)"; then
@@ -184,7 +282,7 @@ for index in "${!packages[@]}"; do
 done
 
 echo
-printf 'Proceed with commits, pushes, and release tags? [y/N] '
+printf 'Proceed with commits, pushes, releases, registry sync, and docs rebuild? [y/N] '
 if ! IFS= read -r confirmation <&3; then
   echo "Release wizard input closed before confirmation." >&2
   exit 1
@@ -196,6 +294,9 @@ y | Y | yes | YES) ;;
   exit 0
   ;;
 esac
+
+release_tags=()
+release_commits=()
 
 for index in "${!packages[@]}"; do
   package="${packages[$index]}"
@@ -210,6 +311,7 @@ for index in "${!packages[@]}"; do
     --level "$level"
 
   new_version="$(manifest_version "$manifest")"
+  tag="$package-v$new_version"
 
   make check
 
@@ -230,10 +332,31 @@ for index in "${!packages[@]}"; do
   scripts/support/python.sh scripts/release/release.py \
     --package "$package" \
     --publish
+
+  release_tags+=("$tag")
+  release_commits+=("$(git rev-parse HEAD)")
 done
+
+for index in "${!packages[@]}"; do
+  wait_for_release_workflow \
+    "${packages[$index]}" \
+    "${release_tags[$index]}" \
+    "${release_commits[$index]}"
+done
+
+trigger_and_wait_for_workflow \
+  "$REGISTRY_REPOSITORY" \
+  "$REGISTRY_WORKFLOW" \
+  "widget registry synchronization"
+
+trigger_and_wait_for_workflow \
+  "$WIDGETS_REPOSITORY" \
+  "$DOCS_WORKFLOW" \
+  "documentation rebuild"
 
 trap - EXIT
 
 echo
 echo "Released ${#packages[@]} package(s)."
-echo "GitHub Actions will build each package archive and create its GitHub release from the pushed tag."
+echo "All package release workflows completed successfully."
+echo "The widget registry is synchronized and the documentation trigger workflow completed successfully."

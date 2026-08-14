@@ -89,7 +89,7 @@ release: ## Validate and publish one package with PACKAGE=name.
 	@$(MAKE) check
 	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)" --publish
 
-release-wizard: ## Interactively bump and release selected packages.
+release-wizard: ## Interactively release packages, sync the registry, and rebuild docs.
 	@scripts/release/release-wizard.sh
 
 ##@ Maintenance
