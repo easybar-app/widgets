@@ -35,12 +35,24 @@ behavior.
 - Lua 5.5
 - Python 3.11 or newer
 - A sibling EasyBarKit checkout, or `EASYBAR_KIT_ROOT` pointing to one
+- `fzf` for the interactive multi-package release wizard
 
 Run the complete validation suite before opening a pull request:
 
 ```sh
 make check
 ```
+
+To release one or more packages interactively, run:
+
+```sh
+make release-wizard
+```
+
+The wizard discovers `packages/*/package.toml`, lets you select packages with `fzf`, asks for a patch,
+minor, or major bump for each selection, validates the repository, commits and pushes each manifest
+bump independently, and publishes the corresponding package tag. The existing tag workflow creates
+the GitHub release and deterministic archive.
 
 ## Documentation
 

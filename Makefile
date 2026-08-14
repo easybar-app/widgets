@@ -15,7 +15,7 @@ TAPLO_SOURCES := .stylua.toml "packages/**/*.toml"
 .PHONY: help check test validate test-unit check-lua \
         fmt fmt-lua fmt-md fmt-yaml fmt-json fmt-toml \
         lint lint-lua lint-md lint-yaml lint-json lint-toml \
-        package bump release clean
+        package bump release release-wizard clean
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z\_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
@@ -89,7 +89,11 @@ release: ## Validate and publish one package with PACKAGE=name.
 	@$(MAKE) check
 	@$(PYTHON) scripts/release/release.py --package "$(PACKAGE)" --publish
 
+release-wizard: ## Interactively bump and release selected packages.
+	@scripts/release/release-wizard.sh
+
 ##@ Maintenance
 
 clean: ## Remove generated package archives.
 	@rm -rf "$(OUTPUT_DIR)"
+
