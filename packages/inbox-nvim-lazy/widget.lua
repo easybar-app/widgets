@@ -12,9 +12,11 @@ local SOURCE_PRESENTATION = {
 }
 
 local STORAGE_WIDGET = "nvim-lazy-inbox"
+local STORAGE_AUTOMATIC_UPDATES_KEY = "automatic_updates"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
 local STORAGE_SOURCE_ORDER_KEY = "source_order"
 local STORAGE_CONTEXT_ORDER_KEY = "context_order"
+local DEFAULT_AUTOMATIC_UPDATES = true
 local DEFAULT_REFRESH_INTERVAL_MINUTES = 60
 local DEFAULT_SOURCE_ORDER = 35
 local DEFAULT_CONTEXT_ORDER = 35
@@ -71,6 +73,17 @@ if NVIM == "" then
 	NVIM = "nvim"
 end
 
+local configured_automatic_updates =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, DEFAULT_AUTOMATIC_UPDATES)
+local automatic_updates = configured_automatic_updates
+if type(automatic_updates) ~= "boolean" then
+	automatic_updates = DEFAULT_AUTOMATIC_UPDATES
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.nvim-lazy-inbox.automatic_updates; using " .. tostring(DEFAULT_AUTOMATIC_UPDATES)
+	)
+end
+
 local configured_refresh_interval =
 	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
 local refresh_interval_minutes = tonumber(configured_refresh_interval)
@@ -110,6 +123,7 @@ local state = {
 }
 local pending_refresh = nil
 local refresh
+local run_update
 
 --- Returns a concise commit identifier or nil when Lazy did not provide one.
 local function short_commit(value)
@@ -172,9 +186,14 @@ local function update_for_id(item_id)
 	return nil
 end
 
---- Publishes source-level refresh and update actions.
+--- Publishes source-level refresh, update, and automatic-update actions.
 local function configure_source_actions()
 	local operation = state.operation
+	local automatic_action = {
+		id = "toggle_automatic_updates",
+		title = "Automatic updates: " .. (automatic_updates and "On" or "Off"),
+		enabled = operation == nil,
+	}
 	local interval_action = {
 		id = "refresh_interval",
 		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
@@ -190,6 +209,7 @@ local function configure_source_actions()
 				busy = operation.item_id == nil,
 				include_in_refresh_all = operation.kind == "refresh" or nil,
 			},
+			automatic_action,
 			interval_action,
 		}
 	else
@@ -200,6 +220,7 @@ local function configure_source_actions()
 				title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",
 				enabled = #state.updates > 0,
 			},
+			automatic_action,
 			interval_action,
 		}
 	end
@@ -290,8 +311,11 @@ local function nvim_command(script, plugin_name)
 	return command
 end
 
---- Checks Lazy for plugin updates without changing installed revisions.
-refresh = function(reason)
+--- Checks Lazy for plugin updates and optionally installs them after the check.
+---@param reason string
+---@param automatic? boolean
+refresh = function(reason, automatic)
+	automatic = automatic == true
 	if state.operation ~= nil then
 		return
 	end
@@ -310,6 +334,7 @@ refresh = function(reason)
 			return
 		end
 		finish_operation(operation, function()
+			local should_update = false
 			if code ~= 0 then
 				state.error = {
 					message = command_error(output, "Headless Neovim exited with code " .. tostring(code)),
@@ -322,15 +347,19 @@ refresh = function(reason)
 				else
 					state.updates = updates
 					state.error = nil
+					should_update = automatic and automatic_updates and #state.updates > 0
 				end
 			end
 			publish()
+			if should_update then
+				run_update(nil)
+			end
 		end)
 	end)
 end
 
 --- Runs one Lazy update operation and refreshes the resulting snapshot.
-local function run_update(plugin)
+run_update = function(plugin)
 	if state.operation ~= nil then
 		return
 	end
@@ -355,15 +384,44 @@ local function run_update(plugin)
 				publish()
 				return
 			end
-			refresh("post_update")
+			refresh("post_update", false)
 		end)
 	end)
+end
+
+--- Persists automatic-update behavior and starts a cycle when enabled.
+---@param enabled boolean
+local function set_automatic_updates(enabled)
+	if type(enabled) ~= "boolean" or enabled == automatic_updates then
+		configure_source_actions()
+		return
+	end
+
+	local ok, err = easybar.storage.set(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, enabled)
+	if not ok then
+		state.error = { message = tostring(err or "EasyBar could not update config.toml"), timestamp = os.time() }
+		publish()
+		return
+	end
+
+	automatic_updates = enabled
+	easybar.log(easybar.level.info, "lazy.nvim inbox automatic updates", "enabled=" .. tostring(enabled))
+	publish()
+	if enabled then
+		refresh("setting_enabled", true)
+	end
+end
+
+--- Runs one scheduled check and allows an automatic update when enabled.
+---@param reason string
+local function run_automatic_update_cycle(reason)
+	refresh(reason, automatic_updates)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "")
 	if action_id == "refresh" then
-		refresh("item")
+		refresh("item", false)
 	elseif action_id == "update" then
 		local plugin = update_for_id(tostring(event.target_widget_id or ""))
 		if plugin ~= nil then
@@ -375,9 +433,11 @@ end)
 easybar.inbox.on_context_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "")
 	if action_id == "refresh" then
-		refresh("manual")
+		refresh("manual", false)
 	elseif action_id == "update_all" and #state.updates > 0 then
 		run_update(nil)
+	elseif action_id == "toggle_automatic_updates" then
+		set_automatic_updates(not automatic_updates)
 	end
 end)
 
@@ -388,7 +448,7 @@ local function schedule_refresh(reason, delay_seconds)
 	end
 	pending_refresh = easybar.after(delay_seconds, function()
 		pending_refresh = nil
-		refresh(reason)
+		run_automatic_update_cycle(reason)
 	end)
 end
 
@@ -396,12 +456,12 @@ local timer = easybar.add(easybar.kind.item, "nvim_lazy_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = function()
-		refresh("interval")
+		run_automatic_update_cycle("interval")
 	end,
 })
 
 timer:subscribe(easybar.events.forced, function()
-	refresh("forced")
+	run_automatic_update_cycle("forced")
 end)
 
 timer:subscribe(easybar.events.system_woke, function()

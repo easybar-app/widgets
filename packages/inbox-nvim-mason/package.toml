@@ -23,6 +23,13 @@ native_inbox = true
 
 [[settings]]
 namespace = "nvim-mason-inbox"
+key = "automatic_updates"
+type = "boolean"
+default = true
+description = "Automatically install available mason.nvim tool updates after scheduled checks."
+
+[[settings]]
+namespace = "nvim-mason-inbox"
 key = "refresh_interval_minutes"
 type = "integer"
 minimum = 5

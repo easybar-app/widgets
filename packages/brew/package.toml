@@ -19,3 +19,10 @@ shared = "^0.1.0"
 
 [requirements]
 commands = ["brew"]
+
+[[settings]]
+namespace = "brew"
+key = "automatic_updates"
+type = "boolean"
+default = true
+description = "Automatically update Homebrew metadata and upgrade eligible outdated packages."

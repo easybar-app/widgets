@@ -2,7 +2,7 @@
 
 `widget.lua` refreshes the [mason.nvim](https://github.com/mason-org/mason.nvim) registry and publishes one native Inbox item per installed tool with an available update.
 
-Each item has an **Update** action. The source menu can refresh the snapshot or update all outdated tools. Update actions use Mason's normal package installer and may invoke external package managers required by those tools.
+Each item has an **Update** action. The source menu can refresh the snapshot, update all outdated tools, and enable or disable automatic updates. Update actions use Mason's normal package installer and may invoke external package managers required by those tools.
 
 ## Requirements
 
@@ -19,11 +19,16 @@ The standalone menu-bar presentation is the `nvim-mason` package. Install only o
 
 ## Configuration
 
-Automatic checks run every 60 minutes by default. Configure an interval from 5 minutes to 7 days and optional Inbox ordering, then reload EasyBar:
+Automatic updates are enabled by default. Every configured interval, the widget refreshes Mason's registry, checks installed tools, and installs every available update. Set `automatic_updates = false` to keep scheduled checks and Inbox notifications without changing installed tools automatically. Manual item and **Update all** actions remain available.
+
+Configure an interval from 5 minutes to 7 days and optional Inbox ordering, then reload EasyBar:
 
 ```toml
 [widgets.nvim-mason-inbox]
+automatic_updates = true
 refresh_interval_minutes = 60
 source_order = 36
 context_order = 36
 ```
+
+`source_order` controls the group when the Inbox is grouped by source. `context_order` controls its position in the Inbox source menu; lower values appear first. The source menu shows and persists the automatic-update toggle.

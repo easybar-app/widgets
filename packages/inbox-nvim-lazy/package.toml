@@ -23,6 +23,13 @@ native_inbox = true
 
 [[settings]]
 namespace = "nvim-lazy-inbox"
+key = "automatic_updates"
+type = "boolean"
+default = true
+description = "Automatically install available lazy.nvim plugin updates after scheduled checks."
+
+[[settings]]
+namespace = "nvim-lazy-inbox"
 key = "refresh_interval_minutes"
 type = "integer"
 minimum = 5

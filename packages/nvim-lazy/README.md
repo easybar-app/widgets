@@ -1,8 +1,8 @@
 # lazy.nvim Updates Widget
 
-`widget.lua` checks for available [lazy.nvim](https://lazy.folke.io/) plugin updates and shows their count in the menu bar. Left-click the widget or choose **Refresh** from its context menu to check again.
+`widget.lua` checks for available [lazy.nvim](https://lazy.folke.io/) plugin updates and shows their count in the menu bar. Left-click the widget or choose **Refresh** from its context menu to check again; **Update all** installs every available plugin update.
 
-The check runs `require("lazy").check({ wait = true, show = false })` inside headless Neovim. It only fetches and compares plugin revisions; it does not install updates or change the lockfile.
+Scheduled checks can also install updates automatically. Updates run through `require("lazy").update({ wait = true, show = false })`, so Lazy updates the plugins and lockfile through its normal API.
 
 ## Requirements
 
@@ -17,9 +17,14 @@ NVIM = "/opt/homebrew/bin/nvim"
 
 ## Configuration
 
-Automatic checks run every 60 minutes by default. The interval accepts values from 1 minute to 24 hours:
+Automatic updates are enabled by default. Every configured interval, the widget checks for updates and installs all available plugins. Set `automatic_updates = false` to keep scheduled checks and the update count without changing installed plugins automatically. Manual **Update all** remains available.
+
+The interval accepts values from 1 minute to 24 hours:
 
 ```toml
 [widgets.nvim-lazy]
+automatic_updates = true
 refresh_interval_minutes = 30
 ```
+
+The context menu shows and persists the automatic-update toggle.

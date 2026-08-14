@@ -12,9 +12,11 @@ local SOURCE_PRESENTATION = {
 }
 
 local STORAGE_WIDGET = "nvim-mason-inbox"
+local STORAGE_AUTOMATIC_UPDATES_KEY = "automatic_updates"
 local STORAGE_REFRESH_INTERVAL_KEY = "refresh_interval_minutes"
 local STORAGE_SOURCE_ORDER_KEY = "source_order"
 local STORAGE_CONTEXT_ORDER_KEY = "context_order"
+local DEFAULT_AUTOMATIC_UPDATES = true
 local DEFAULT_REFRESH_INTERVAL_MINUTES = 60
 local DEFAULT_SOURCE_ORDER = 36
 local DEFAULT_CONTEXT_ORDER = 36
@@ -95,6 +97,17 @@ if NVIM == "" then
 	NVIM = "nvim"
 end
 
+local configured_automatic_updates =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, DEFAULT_AUTOMATIC_UPDATES)
+local automatic_updates = configured_automatic_updates
+if type(automatic_updates) ~= "boolean" then
+	automatic_updates = DEFAULT_AUTOMATIC_UPDATES
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.nvim-mason-inbox.automatic_updates; using " .. tostring(DEFAULT_AUTOMATIC_UPDATES)
+	)
+end
+
 local configured_refresh_interval =
 	easybar.storage.get(STORAGE_WIDGET, STORAGE_REFRESH_INTERVAL_KEY, DEFAULT_REFRESH_INTERVAL_MINUTES)
 local refresh_interval_minutes = tonumber(configured_refresh_interval)
@@ -129,6 +142,7 @@ local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local state = { updates = {}, error = nil, operation = nil }
 local pending_refresh = nil
 local refresh
+local run_update
 
 --- Returns the first category supplied by Mason.
 local function package_category(categories)
@@ -195,6 +209,11 @@ end
 --- Publishes source actions for the current operation and snapshot.
 local function configure_source_actions()
 	local operation = state.operation
+	local automatic_action = {
+		id = "toggle_automatic_updates",
+		title = "Automatic updates: " .. (automatic_updates and "On" or "Off"),
+		enabled = operation == nil,
+	}
 	local interval = {
 		id = "refresh_interval",
 		title = "Refresh every " .. tostring(refresh_interval_minutes) .. " minutes",
@@ -210,6 +229,7 @@ local function configure_source_actions()
 				busy = operation.item_id == nil,
 				include_in_refresh_all = operation.kind == "refresh" or nil,
 			},
+			automatic_action,
 			interval,
 		}
 	else
@@ -220,6 +240,7 @@ local function configure_source_actions()
 				title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",
 				enabled = #state.updates > 0,
 			},
+			automatic_action,
 			interval,
 		}
 	end
@@ -298,8 +319,11 @@ local function nvim_command(script, package_name)
 	return command
 end
 
---- Refreshes Mason registry metadata and publishes outdated tools.
-refresh = function(reason)
+--- Refreshes Mason registry metadata and optionally installs outdated tools.
+---@param reason string
+---@param automatic? boolean
+refresh = function(reason, automatic)
+	automatic = automatic == true
 	if state.operation ~= nil then
 		return
 	end
@@ -316,6 +340,7 @@ refresh = function(reason)
 			return
 		end
 		finish_operation(operation, function()
+			local should_update = false
 			if code ~= 0 then
 				state.error = {
 					message = command_error(output, "Headless Neovim exited with code " .. tostring(code)),
@@ -328,15 +353,19 @@ refresh = function(reason)
 				else
 					state.updates = updates
 					state.error = nil
+					should_update = automatic and automatic_updates and #state.updates > 0
 				end
 			end
 			publish()
+			if should_update then
+				run_update(nil)
+			end
 		end)
 	end)
 end
 
 --- Updates one selected tool or every outdated tool, then reconciles.
-local function run_update(update)
+run_update = function(update)
 	if state.operation ~= nil then
 		return
 	end
@@ -356,15 +385,44 @@ local function run_update(update)
 				publish()
 				return
 			end
-			refresh("post_update")
+			refresh("post_update", false)
 		end)
 	end)
+end
+
+--- Persists automatic-update behavior and starts a cycle when enabled.
+---@param enabled boolean
+local function set_automatic_updates(enabled)
+	if type(enabled) ~= "boolean" or enabled == automatic_updates then
+		configure_source_actions()
+		return
+	end
+
+	local ok, err = easybar.storage.set(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, enabled)
+	if not ok then
+		state.error = { message = tostring(err or "EasyBar could not update config.toml"), timestamp = os.time() }
+		publish()
+		return
+	end
+
+	automatic_updates = enabled
+	easybar.log(easybar.level.info, "mason.nvim inbox automatic updates", "enabled=" .. tostring(enabled))
+	publish()
+	if enabled then
+		refresh("setting_enabled", true)
+	end
+end
+
+--- Runs one scheduled check and allows an automatic update when enabled.
+---@param reason string
+local function run_automatic_update_cycle(reason)
+	refresh(reason, automatic_updates)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "")
 	if action_id == "refresh" then
-		refresh("item")
+		refresh("item", false)
 	elseif action_id == "update" then
 		local update = update_for_id(tostring(event.target_widget_id or ""))
 		if update ~= nil then
@@ -376,9 +434,11 @@ end)
 easybar.inbox.on_context_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "")
 	if action_id == "refresh" then
-		refresh("manual")
+		refresh("manual", false)
 	elseif action_id == "update_all" and #state.updates > 0 then
 		run_update(nil)
+	elseif action_id == "toggle_automatic_updates" then
+		set_automatic_updates(not automatic_updates)
 	end
 end)
 
@@ -389,7 +449,7 @@ local function schedule_refresh(reason, delay_seconds)
 	end
 	pending_refresh = easybar.after(delay_seconds, function()
 		pending_refresh = nil
-		refresh(reason)
+		run_automatic_update_cycle(reason)
 	end)
 end
 
@@ -397,11 +457,11 @@ local timer = easybar.add(easybar.kind.item, "nvim_mason_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = function()
-		refresh("interval")
+		run_automatic_update_cycle("interval")
 	end,
 })
 timer:subscribe(easybar.events.forced, function()
-	refresh("forced")
+	run_automatic_update_cycle("forced")
 end)
 timer:subscribe(easybar.events.system_woke, function()
 	schedule_refresh("wake", NETWORK_READY_DELAY_SECONDS)

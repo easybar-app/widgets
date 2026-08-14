@@ -3,7 +3,16 @@ local easybar_root = assert(arg[2], "EasyBar repository root argument is require
 local host = assert(loadfile(root .. "/tests/support/inbox_host.lua"))()
 
 local function load_widget(storage, environment)
+	storage = storage or {}
+	if storage["nvim-lazy-inbox:automatic_updates"] == nil then
+		storage["nvim-lazy-inbox:automatic_updates"] = false
+	end
 	return host.load(root, easybar_root, "inbox-nvim-lazy", storage, environment)
+end
+
+--- Loads the widget with manifest defaults, including automatic updates enabled.
+local function load_widget_with_defaults(environment)
+	return host.load(root, easybar_root, "inbox-nvim-lazy", nil, environment)
 end
 
 local function test_refresh_publishes_plugin_updates()
@@ -31,6 +40,10 @@ local function test_refresh_publishes_plugin_updates()
 	assert(first.url == "https://github.com/folke/lazy.nvim", "plugin items must link to their repository")
 	assert(state:item_has_action(first.id, "update"), "plugin items must offer an update action")
 	assert(assert(state:source_action("update_all")).title == "Update all (2)", "the source must offer Update all")
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: Off",
+		"the source must expose automatic-update state"
+	)
 	assert(assert(state:source_action("refresh_interval")).title == "Refresh every 30 minutes")
 
 	state.context_action_handler({ action_id = "update_all" })
@@ -76,8 +89,39 @@ local function test_failures_retain_the_last_snapshot()
 	assert(state:item("plugin:lazy.nvim") ~= nil, "check failures must retain the last valid snapshot")
 end
 
+local function test_automatic_updates_default_on_and_update_all()
+	local state = load_widget_with_defaults()
+	state:run_next_timer()
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: On",
+		"lazy.nvim automatic updates must default to on"
+	)
+	state:complete_next_command("EASYBAR_NVIM_LAZY_UPDATES=lazy-updates-two\n", 0)
+	state:run_next_timer()
+	assert(#state.commands == 1, "an automatic check with updates must start Update all")
+	assert(state.commands[1].command[1] == "/usr/bin/env", "automatic updates must invoke Neovim without a shell")
+	assert(state.commands[1].command[2] == "EASYBAR_NVIM_LAZY_PLUGIN=", "automatic updates must select all plugins")
+end
+
+local function test_automatic_updates_toggle_persists_and_starts_cycle()
+	local state = load_widget({ ["nvim-lazy-inbox:automatic_updates"] = false })
+	state:run_next_timer()
+	state:complete_next_command("EASYBAR_NVIM_LAZY_UPDATES=lazy-updates-empty\n", 0)
+	state:run_next_timer()
+
+	state.context_action_handler({ action_id = "toggle_automatic_updates" })
+	assert(state.storage_values["nvim-lazy-inbox:automatic_updates"] == true, "lazy.nvim must persist automatic updates")
+	assert(
+		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: On",
+		"the source menu must show enabled automatic updates"
+	)
+	assert(#state.commands == 1, "enabling automatic updates must start a fresh check")
+end
+
 test_refresh_publishes_plugin_updates()
 test_item_update_runs_lazy_and_reconciles()
 test_failures_retain_the_last_snapshot()
+test_automatic_updates_default_on_and_update_all()
+test_automatic_updates_toggle_persists_and_starts_cycle()
 
 print("lazy.nvim inbox widget regression checks passed")

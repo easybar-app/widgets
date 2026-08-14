@@ -2,7 +2,7 @@
 
 `widget.lua` checks [lazy.nvim](https://lazy.folke.io/) for available plugin updates and publishes one item per outdated plugin to EasyBar's native inbox.
 
-Each item has an **Update** action. The source context menu can refresh the snapshot or update every outdated plugin. Refreshing only fetches and compares plugin revisions; update actions intentionally update plugins and the Lazy lockfile through Lazy's normal update API.
+Each item has an **Update** action. The source context menu can refresh the snapshot, update every outdated plugin, and enable or disable automatic updates. Update actions use Lazy's normal update API and update the Lazy lockfile.
 
 ## Requirements
 
@@ -19,13 +19,16 @@ The standalone menu-bar presentation is the `nvim-lazy` package. Install only on
 
 ## Configuration
 
-Automatic checks run every 60 minutes by default. Configure an interval from 5 minutes to 7 days and optional Inbox ordering, then reload EasyBar:
+Automatic updates are enabled by default. Every configured interval, the widget checks for plugin updates and installs all available updates. Set `automatic_updates = false` to keep scheduled checks and Inbox notifications without changing installed plugins automatically. Manual item and **Update all** actions remain available.
+
+Configure an interval from 5 minutes to 7 days and optional Inbox ordering, then reload EasyBar:
 
 ```toml
 [widgets.nvim-lazy-inbox]
+automatic_updates = true
 refresh_interval_minutes = 60
 source_order = 35
 context_order = 35
 ```
 
-`source_order` controls the group when the Inbox is grouped by source. `context_order` controls its position in the Inbox source menu; lower values appear first.
+`source_order` controls the group when the Inbox is grouped by source. `context_order` controls its position in the Inbox source menu; lower values appear first. The source menu shows and persists the automatic-update toggle.

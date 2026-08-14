@@ -51,6 +51,9 @@ local ID_ACTIONS = WIDGET_ID .. "_actions"
 local ID_UPGRADE = WIDGET_ID .. "_upgrade"
 local ID_UPDATE = WIDGET_ID .. "_update"
 
+local STORAGE_WIDGET = "brew"
+local STORAGE_AUTOMATIC_UPDATES_KEY = "automatic_updates"
+local DEFAULT_AUTOMATIC_UPDATES = true
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
 local MAX_WARNING_LINES = 4
@@ -108,6 +111,17 @@ local THRESHOLDS = {
 	{ count = 5, color = COLORS.orange },
 	{ count = 3, color = COLORS.warn },
 }
+
+local configured_automatic_updates =
+	easybar.storage.get(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, DEFAULT_AUTOMATIC_UPDATES)
+local automatic_updates = configured_automatic_updates
+if type(automatic_updates) ~= "boolean" then
+	automatic_updates = DEFAULT_AUTOMATIC_UPDATES
+	easybar.log(
+		easybar.level.warn,
+		"invalid widgets.brew.automatic_updates; using " .. tostring(DEFAULT_AUTOMATIC_UPDATES)
+	)
+end
 
 local running = false
 local dynamic_rows = {}
@@ -1048,6 +1062,18 @@ local function render_popup()
 	render_warning(order)
 end
 
+--- Builds the Homebrew widget context menu.
+---@return table[]
+local function context_menu()
+	return {
+		{
+			id = "toggle_automatic_updates",
+			title = "Automatic updates: " .. (automatic_updates and "On" or "Off"),
+			enabled = not running,
+		},
+	}
+end
+
 --- Renders the bar widget as a compact icon-only item.
 local function render_bar()
 	local icon, color = current_bar_visual()
@@ -1060,6 +1086,7 @@ local function render_bar()
 		label = {
 			string = "",
 		},
+		context_menu = context_menu(),
 	})
 end
 
@@ -1199,15 +1226,6 @@ local function update_now()
 	run_brew_update(handle_update_brew_update)
 end
 
---- Updates Homebrew only when the widget is due.
-local function update_if_due()
-	if running or not check_due() then
-		return
-	end
-
-	update_now()
-end
-
 local handle_upgrade_formula
 local handle_upgrade_casks
 
@@ -1273,13 +1291,14 @@ handle_upgrade_casks = function(_, cask_upgrade_code)
 end
 
 --- Upgrades packages, then checks outdated packages.
-local function upgrade_now()
+---@param force? boolean Bypasses the retained-snapshot guard for automatic cycles.
+local function upgrade_now(force)
 	if running then
 		log(easybar.level.debug, "upgrade_now skipped", "running=true")
 		return
 	end
 
-	if count_upgradeable_packages() == 0 then
+	if not force and count_upgradeable_packages() == 0 then
 		log(easybar.level.debug, "upgrade_now skipped", "upgradeable=0")
 		return
 	end
@@ -1289,6 +1308,49 @@ local function upgrade_now()
 	start_operation("upgrading", "Updating and upgrading… writing " .. BREW_LOG_FILE_NAME)
 
 	run_brew_update(handle_upgrade_brew_update)
+end
+
+--- Runs one scheduled Homebrew cycle using the persisted automatic-update setting.
+local function run_automatic_update_cycle()
+	if automatic_updates then
+		upgrade_now(true)
+	else
+		check_outdated("Checking outdated packages…")
+	end
+end
+
+--- Runs a scheduled Homebrew cycle only when the polling interval is due.
+local function automatic_update_if_due()
+	if running or not check_due() then
+		return
+	end
+
+	run_automatic_update_cycle()
+end
+
+--- Persists automatic-update behavior and starts a cycle when enabled.
+---@param enabled boolean
+local function set_automatic_updates(enabled)
+	if type(enabled) ~= "boolean" or enabled == automatic_updates then
+		render()
+		return
+	end
+
+	local ok, err = easybar.storage.set(STORAGE_WIDGET, STORAGE_AUTOMATIC_UPDATES_KEY, enabled)
+	if not ok then
+		state.error =
+			make_error("Could not save automatic updates", tostring(err or "EasyBar could not update config.toml"), "")
+		state.phase = "error"
+		render()
+		return
+	end
+
+	automatic_updates = enabled
+	log(easybar.level.info, "automatic updates", "enabled=" .. tostring(enabled))
+	render()
+	if enabled then
+		run_automatic_update_cycle()
+	end
 end
 
 --- Returns a fresh button background configuration.
@@ -1342,11 +1404,9 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	label = {
 		string = "",
 	},
-	--- Performs the periodic due check and refreshes package state when necessary.
+	--- Performs the periodic automatic-update cycle.
 	on_interval = function()
-		if not running then
-			check_outdated("Checking outdated packages…")
-		end
+		run_automatic_update_cycle()
 	end,
 })
 
@@ -1440,14 +1500,19 @@ brew_widget:subscribe({
 	easybar.events.session_active,
 }, function(event)
 	log(easybar.level.debug, "lifecycle event", tostring(event and event.name), "due=" .. tostring(check_due()))
-	update_if_due()
+	automatic_update_if_due()
 end)
 
---- Forces an immediate outdated-package check when EasyBar triggers the widget.
+--- Runs the configured automatic cycle when EasyBar forces the widget.
 brew_widget:subscribe(easybar.events.forced, function()
-	if not running then
-		check_outdated("Checking outdated packages…")
+	run_automatic_update_cycle()
+end)
+
+--- Toggles persisted automatic updates from the widget context menu.
+brew_widget:subscribe(easybar.events.context_menu.clicked, function(event)
+	if event.action_id == "toggle_automatic_updates" then
+		set_automatic_updates(not automatic_updates)
 	end
 end)
 
-check_outdated("Checking outdated packages…")
+run_automatic_update_cycle()
