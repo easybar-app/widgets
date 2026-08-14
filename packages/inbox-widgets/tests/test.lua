@@ -22,13 +22,13 @@ local function complete_refresh(state, installed_fixture, registry_fixture)
 	state:run_next_timer()
 end
 
---- Verifies EasyBar Native updates use its isolated database and CLI.
+--- Verifies EasyBar Native package checks and updates use its isolated CLI.
 local function test_native_frontend_uses_native_package_runtime()
 	local state = load_widget(nil, "easybar-native")
 	state:run_next_timer()
 	assert(
-		state.commands[1].command[2] == "/tmp/easybar/packages/installed.json",
-		"the installed database must be resolved from the active package directory"
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar-native widgets installed --json",
+		"Native package checks must use the easybar-native CLI"
 	)
 	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
 
@@ -44,7 +44,10 @@ local function test_finds_registry_updates_and_ignores_local_packages()
 	local state = load_widget()
 	state:run_next_timer()
 	assert(state:has_busy_source_action(), "the startup check must show source activity")
-	assert(state.commands[1].command[1] == "/bin/cat", "the installed database must be read directly")
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar widgets installed --json",
+		"installed package state must include CLI pin information"
+	)
 	complete_refresh(state, "inbox-widgets-installed", "inbox-widgets-registry")
 
 	local brew = assert(state:item("package:brew"), "an outdated registry package must be published")
@@ -57,6 +60,25 @@ local function test_finds_registry_updates_and_ignores_local_packages()
 	assert(state:item("package:shared") == nil, "a current package must not be published")
 	assert(not state:has_busy_source_action(), "the completed check must clear source activity")
 	assert(assert(state:source_action("update_all")).title == "Update all (1)", "the source must offer all updates")
+end
+
+--- Verifies pinned package updates remain visible but cannot be started from the inbox.
+local function test_pinned_update_is_visible_but_not_actionable()
+	local state = load_widget()
+	state:run_next_timer()
+	complete_refresh(state, "inbox-widgets-installed-pinned", "inbox-widgets-registry")
+
+	local brew = assert(state:item("package:brew"), "a pinned outdated package must remain visible")
+	assert(brew.body == "0.1.0 → 0.2.0 · pinned", "pinned update state must be shown")
+	assert(not state:item_has_action("package:brew", "update"), "a pinned package must not offer Update")
+	local update_all = assert(state:source_action("update_all"), "the source must report pinned update state")
+	assert(update_all.title == "All updates pinned", "bulk update state must explain why no updates are actionable")
+	assert(update_all.enabled == false, "bulk update must be disabled when every update is pinned")
+
+	state.action_handler({ action_id = "update", target_widget_id = "package:brew" })
+	assert(#state.commands == 0, "a synthetic pinned update action must not invoke the CLI")
+	state.context_action_handler({ action_id = "update_all" })
+	assert(#state.commands == 0, "bulk update must not run when every update is pinned")
 end
 
 --- Verifies a package update invokes the CLI and refreshes update state.
@@ -76,7 +98,10 @@ local function test_update_runs_the_package_updater_and_rechecks()
 
 	state:complete_next_command("Installed brew 0.2.0", 0)
 	state:run_next_timer()
-	assert(state.commands[1].command[1] == "/bin/cat", "a successful update must recheck installed state")
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar widgets installed --json",
+		"a successful update must recheck installed state"
+	)
 	complete_refresh(state, "inbox-widgets-current", "inbox-widgets-registry")
 	assert(state:item("package:brew") == nil, "the updated package must disappear from the inbox")
 end
@@ -118,7 +143,10 @@ local function test_manual_refresh_rechecks_packages()
 
 	state.context_action_handler({ action_id = "refresh" })
 	assert(state:has_busy_source_action(), "manual refresh must show source activity")
-	assert(state.commands[1].command[1] == "/bin/cat", "manual refresh must recheck installed packages")
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env easybar widgets installed --json",
+		"manual refresh must recheck installed packages"
+	)
 end
 
 --- Verifies that the configured refresh interval controls source metadata and timers.
@@ -153,6 +181,7 @@ end
 
 test_finds_registry_updates_and_ignores_local_packages()
 test_native_frontend_uses_native_package_runtime()
+test_pinned_update_is_visible_but_not_actionable()
 test_update_runs_the_package_updater_and_rechecks()
 test_update_all_uses_the_cli_update_command()
 test_invalid_registry_retains_the_last_snapshot()

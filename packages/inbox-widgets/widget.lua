@@ -80,19 +80,6 @@ local function frontend_cli_name()
 	return name
 end
 
---- Returns the path to the active frontend's installed-package database.
-local function installed_database_path()
-	local active_directory = os.getenv("EASYBAR_INTERNAL_WIDGET_PACKAGES_DIRECTORY")
-	if type(active_directory) == "string" and active_directory ~= "" then
-		local packages_directory = active_directory:gsub("/+$", ""):match("^(.*)/[^/]+$")
-		if packages_directory ~= nil then
-			return packages_directory .. "/installed.json"
-		end
-	end
-
-	return nil
-end
-
 --- Decodes a JSON object or returns a source-specific validation error.
 local function decode_object(output, label)
 	local ok, value = pcall(easybar.json.decode, tostring(output or ""))
@@ -196,12 +183,9 @@ end
 
 --- Finds registry releases newer than the corresponding installed package versions.
 local function find_updates(installed_output, registry_output)
-	local installed, installed_error = decode_object(installed_output, "The installed package database")
-	if installed == nil then
-		return nil, installed_error
-	end
-	if not easybar.json.is_array(installed.packages) then
-		return nil, "The installed package database has no packages array"
+	local installed_ok, installed = pcall(easybar.json.decode, tostring(installed_output or ""))
+	if not installed_ok or not easybar.json.is_array(installed) then
+		return nil, "The installed package list did not contain a JSON array"
 	end
 
 	local registry, registry_error = decode_object(registry_output, "The widget registry")
@@ -220,7 +204,7 @@ local function find_updates(installed_output, registry_output)
 	end
 
 	local updates = {}
-	for _, package in ipairs(installed.packages) do
+	for _, package in ipairs(installed) do
 		if
 			type(package) == "table"
 			and type(package.name) == "string"
@@ -238,6 +222,7 @@ local function find_updates(installed_output, registry_output)
 						kind = package.kind == "library" and "library" or "widget",
 						installed = package.version,
 						latest = available.latest,
+						pinned = package.pinned == true,
 					}
 				end
 			end
@@ -257,6 +242,17 @@ local function package_for_id(id)
 		end
 	end
 	return nil
+end
+
+--- Returns the number of outdated packages that normal update commands may change.
+local function updateable_count()
+	local count = 0
+	for _, package in ipairs(state.updates) do
+		if not package.pinned then
+			count = count + 1
+		end
+	end
+	return count
 end
 
 --- Publishes source-level actions that reflect the active update operation.
@@ -283,6 +279,14 @@ local function configure_source_actions()
 			},
 		})
 	else
+		local update_count = updateable_count()
+		local update_title = "No updates"
+		if update_count > 0 then
+			update_title = "Update all (" .. tostring(update_count) .. ")"
+		elseif #state.updates > 0 then
+			update_title = "All updates pinned"
+		end
+
 		easybar.inbox.configure(SOURCE, {
 			order = context_order,
 			presentation = SOURCE_PRESENTATION,
@@ -290,8 +294,8 @@ local function configure_source_actions()
 				{ id = "refresh", title = "Refresh", include_in_refresh_all = true },
 				{
 					id = "update_all",
-					title = #state.updates > 0 and "Update all (" .. tostring(#state.updates) .. ")" or "No updates",
-					enabled = #state.updates > 0,
+					title = update_title,
+					enabled = update_count > 0,
 				},
 				refresh_interval,
 			},
@@ -317,15 +321,17 @@ local function publish()
 
 	for _, package in ipairs(state.updates) do
 		local action
-		if state.operation ~= nil and state.operation.item_id == package.id then
-			action = { id = "update", title = state.operation.title, enabled = false, busy = true }
-		elseif state.operation == nil then
-			action = { id = "update", title = "Update" }
+		if not package.pinned then
+			if state.operation ~= nil and state.operation.item_id == package.id then
+				action = { id = "update", title = state.operation.title, enabled = false, busy = true }
+			elseif state.operation == nil then
+				action = { id = "update", title = "Update" }
+			end
 		end
 		items[#items + 1] = {
 			id = package.id,
 			title = package.name,
-			body = package.installed .. " → " .. package.latest,
+			body = package.installed .. " → " .. package.latest .. (package.pinned and " · pinned" or ""),
 			category = package.kind == "library" and "Libraries" or "Widgets",
 			severity = "info",
 			unread = true,
@@ -373,11 +379,11 @@ refresh = function(reason, activity_item_id)
 		pending_refresh = nil
 	end
 
-	local database_path = installed_database_path()
-	if database_path == nil then
+	local cli_name = frontend_cli_name()
+	if cli_name == nil then
 		state.error = {
 			title = "Could not check package updates",
-			message = "Could not resolve the active frontend's package directory",
+			message = "Could not resolve the active frontend CLI",
 			timestamp = os.time(),
 		}
 		publish()
@@ -393,55 +399,64 @@ refresh = function(reason, activity_item_id)
 	publish()
 	log(easybar.level.debug, "package update refresh started reason=" .. tostring(reason or "unspecified"))
 
-	easybar.spawn_async({ "/bin/cat", database_path }, EXEC.read, function(installed_output, installed_code)
-		if state.operation ~= operation then
-			return
-		end
-		if installed_code ~= 0 then
-			fail_operation(operation, "Could not check package updates", installed_output, "Could not read " .. database_path)
-			return
-		end
+	easybar.spawn_async(
+		{ "/usr/bin/env", cli_name, "widgets", "installed", "--json" },
+		EXEC.read,
+		function(installed_output, installed_code)
+			if state.operation ~= operation then
+				return
+			end
+			if installed_code ~= 0 then
+				fail_operation(
+					operation,
+					"Could not check package updates",
+					installed_output,
+					cli_name .. " widgets installed exited with code " .. tostring(installed_code)
+				)
+				return
+			end
 
-		operation.handle = retry.run(easybar, {
-			delays = REFRESH_BACKOFF_SECONDS,
-			--- Starts the registry-index request after installed package data is available.
-			attempt = function(done)
-				return easybar.spawn_async({
-					"/usr/bin/curl",
-					"--fail",
-					"--silent",
-					"--show-error",
-					"--location",
-					REGISTRY_URL,
-				}, EXEC.registry, done)
-			end,
-			should_retry = retry.is_transient_network_error,
-			--- Combines installed and registry results into the final update snapshot.
-			on_complete = function(registry_output, registry_code)
-				if registry_code ~= 0 then
-					fail_operation(
-						operation,
-						"Could not fetch the widget registry",
-						registry_output,
-						"curl exited with code " .. tostring(registry_code)
-					)
-					return
-				end
+			operation.handle = retry.run(easybar, {
+				delays = REFRESH_BACKOFF_SECONDS,
+				--- Starts the registry-index request after installed package data is available.
+				attempt = function(done)
+					return easybar.spawn_async({
+						"/usr/bin/curl",
+						"--fail",
+						"--silent",
+						"--show-error",
+						"--location",
+						REGISTRY_URL,
+					}, EXEC.registry, done)
+				end,
+				should_retry = retry.is_transient_network_error,
+				--- Combines installed and registry results into the final update snapshot.
+				on_complete = function(registry_output, registry_code)
+					if registry_code ~= 0 then
+						fail_operation(
+							operation,
+							"Could not fetch the widget registry",
+							registry_output,
+							"curl exited with code " .. tostring(registry_code)
+						)
+						return
+					end
 
-				local updates, parse_error = find_updates(installed_output, registry_output)
-				if updates == nil then
-					fail_operation(operation, "Could not check package updates", parse_error, parse_error)
-					return
-				end
-				finish_operation(operation, function()
-					state.updates = updates
-					state.error = nil
-					log(easybar.level.debug, "package update refresh completed updates=" .. tostring(#updates))
-					publish()
-				end)
-			end,
-		})
-	end)
+					local updates, parse_error = find_updates(installed_output, registry_output)
+					if updates == nil then
+						fail_operation(operation, "Could not check package updates", parse_error, parse_error)
+						return
+					end
+					finish_operation(operation, function()
+						state.updates = updates
+						state.error = nil
+						log(easybar.level.debug, "package update refresh completed updates=" .. tostring(#updates))
+						publish()
+					end)
+				end,
+			})
+		end
+	)
 end
 
 --- Runs an active-frontend package update command and refreshes the resulting snapshot.
@@ -499,7 +514,7 @@ easybar.inbox.on_action(SOURCE, function(event)
 		refresh("item")
 	elseif action_id == "update" then
 		local package = package_for_id(tostring(event.target_widget_id or ""))
-		if package ~= nil then
+		if package ~= nil and not package.pinned then
 			update_package(package)
 		end
 	end
@@ -509,7 +524,7 @@ easybar.inbox.on_context_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "")
 	if action_id == "refresh" then
 		refresh("manual")
-	elseif action_id == "update_all" and #state.updates > 0 then
+	elseif action_id == "update_all" and updateable_count() > 0 then
 		update_all_packages()
 	end
 end)

@@ -70,7 +70,7 @@ local function callable_noop()
 	return setmetatable({}, { __call = function() end })
 end
 
-local function installed_package(name, version, kind, source)
+local function installed_package(name, version, kind, source, pinned)
 	return json.object({
 		name = name,
 		version = version,
@@ -79,6 +79,7 @@ local function installed_package(name, version, kind, source)
 		dependencies = json.object({}),
 		exports = json.object({}),
 		source = source,
+		pinned = pinned == true,
 	})
 end
 
@@ -169,13 +170,16 @@ local function decoded_fixture(value)
 		return json.object({ formulae = json.object({}) })
 	elseif value == "inbox-widgets-installed" or value == "inbox-widgets-current" then
 		local brew_version = value == "inbox-widgets-current" and "0.2.0" or "0.1.0"
-		return json.object({
-			layout_version = 2,
-			packages = json.array({
-				installed_package("brew", brew_version, "widget", widget_release("brew", brew_version)),
-				installed_package("shared", "0.1.0", "library", widget_release("shared", "0.1.0")),
-				installed_package("local-tool", "0.1.0", "widget", "/tmp/local-tool"),
-			}),
+		return json.array({
+			installed_package("brew", brew_version, "widget", widget_release("brew", brew_version), false),
+			installed_package("shared", "0.1.0", "library", widget_release("shared", "0.1.0"), false),
+			installed_package("local-tool", "0.1.0", "widget", "/tmp/local-tool", false),
+		})
+	elseif value == "inbox-widgets-installed-pinned" then
+		return json.array({
+			installed_package("brew", "0.1.0", "widget", widget_release("brew", "0.1.0"), true),
+			installed_package("shared", "0.1.0", "library", widget_release("shared", "0.1.0"), false),
+			installed_package("local-tool", "0.1.0", "widget", "/tmp/local-tool", false),
 		})
 	elseif value == "inbox-widgets-registry" then
 		return json.object({

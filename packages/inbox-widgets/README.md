@@ -5,8 +5,10 @@
 Use **Update** on an inbox item to install that package's latest registry release. Use **Refresh**
 from the Widgets source menu—or the inbox refresh button—to check immediately. The source menu
 also provides **Update all** when updates are available; checks run every six hours and after wake
-or session activation. Update actions use the CLI for the active frontend, so the same behavior is
-available from the terminal with `easybar widgets update` or `easybar-native widgets update`.
+or session activation. Pinned packages remain visible when a newer release exists, but they are
+marked as pinned, do not expose **Update**, and are excluded from **Update all**. Update actions use
+the CLI for the active frontend, so the same behavior is available from the terminal with
+`easybar widgets update` or `easybar-native widgets update`.
 
 ## Configuration
 
