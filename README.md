@@ -66,4 +66,3 @@ finally triggers the documentation rebuild.
 ## License
 
 Licensed under the [Apache License 2.0](./LICENSE).
-
