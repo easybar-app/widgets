@@ -1,0 +1,17 @@
+manifest_version = 2
+name = "inbox-demo"
+version = "0.1.0"
+kind = "widget"
+description = "Representative GitHub, GitLab, and Homebrew messages for EasyBar's native inbox."
+license = "Apache-2.0"
+minimum_easybar_kit_version = "0.1.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "inbox", "notifications"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/inbox-demo"
+
+[requirements]
+native_inbox = true
