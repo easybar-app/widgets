@@ -62,6 +62,24 @@ require_gh_authentication() {
   fi
 }
 
+tag_exists_on_origin() {
+  local tag="$1"
+  local status
+
+  if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+    return 0
+  else
+    status=$?
+  fi
+
+  if [ "$status" -eq 2 ]; then
+    return 1
+  fi
+
+  echo "Could not inspect remote tag: $tag" >&2
+  exit 1
+}
+
 manifest_version() {
   local manifest="$1"
 
@@ -73,9 +91,11 @@ from pathlib import Path
 path = Path(sys.argv[1])
 with path.open("rb") as handle:
     manifest = tomllib.load(handle)
+
 version = manifest.get("version")
 if not isinstance(version, str) or not version:
     raise SystemExit(f"missing package version: {path}")
+
 print(version)
 PY
 }
@@ -97,6 +117,7 @@ select_packages() {
     if ! version="$(manifest_version "$manifest")"; then
       return 2
     fi
+
     printf '%s\t%s\n' "$package" "$version"
   done <<<"$manifests" |
     fzf \
@@ -124,12 +145,27 @@ choose_level() {
       echo "Release wizard input closed while choosing a bump level." >&2
       return 1
     fi
+
     case "$answer" in
-    1 | patch | p) printf '%s\n' patch; return ;;
-    2 | minor | n) printf '%s\n' minor; return ;;
-    3 | major | m) printf '%s\n' major; return ;;
-    s | skip) printf '%s\n' skip; return ;;
-    *) echo "Choose 1, 2, 3, or s." >&2 ;;
+    1 | patch | p)
+      printf '%s\n' patch
+      return
+      ;;
+    2 | minor | n)
+      printf '%s\n' minor
+      return
+      ;;
+    3 | major | m)
+      printf '%s\n' major
+      return
+      ;;
+    s | skip)
+      printf '%s\n' skip
+      return
+      ;;
+    *)
+      echo "Choose 1, 2, 3, or s." >&2
+      ;;
     esac
   done
 }
@@ -138,6 +174,7 @@ latest_workflow_run_id() {
   local repository="$1"
   local workflow="$2"
   local event="${3:-}"
+
   local arguments=(
     run list
     --repo "$repository"
@@ -177,7 +214,9 @@ wait_for_release_workflow() {
     )"
 
     if [ -n "$run_id" ]; then
-      gh run watch "$run_id" --repo "$WIDGETS_REPOSITORY" --exit-status
+      gh run watch "$run_id" \
+        --repo "$WIDGETS_REPOSITORY" \
+        --exit-status
       return
     fi
 
@@ -196,15 +235,31 @@ trigger_and_wait_for_workflow() {
   local run_id=""
   local attempt
 
-  previous_run_id="$(latest_workflow_run_id "$repository" "$workflow" workflow_dispatch)"
+  previous_run_id="$(
+    latest_workflow_run_id \
+      "$repository" \
+      "$workflow" \
+      workflow_dispatch
+  )"
 
   printf '\n==> Triggering %s\n' "$label"
-  gh workflow run "$workflow" --repo "$repository" --ref main
+
+  gh workflow run "$workflow" \
+    --repo "$repository" \
+    --ref main
 
   for ((attempt = 1; attempt <= WORKFLOW_DISCOVERY_ATTEMPTS; attempt++)); do
-    run_id="$(latest_workflow_run_id "$repository" "$workflow" workflow_dispatch)"
+    run_id="$(
+      latest_workflow_run_id \
+        "$repository" \
+        "$workflow" \
+        workflow_dispatch
+    )"
+
     if [ -n "$run_id" ] && [ "$run_id" != "$previous_run_id" ]; then
-      gh run watch "$run_id" --repo "$repository" --exit-status
+      gh run watch "$run_id" \
+        --repo "$repository" \
+        --exit-status
       return
     fi
 
@@ -216,16 +271,22 @@ trigger_and_wait_for_workflow() {
 }
 
 current_manifest=""
+
 restore_uncommitted_manifest() {
   local status=$?
 
-  if [ "$status" -ne 0 ] && [ -n "$current_manifest" ] && ! git diff --quiet -- "$current_manifest"; then
+  if
+    [ "$status" -ne 0 ] &&
+      [ -n "$current_manifest" ] &&
+      ! git diff --quiet -- "$current_manifest"
+  then
     git restore -- "$current_manifest"
     echo "Restored uncommitted manifest after failure: $current_manifest" >&2
   fi
 
   exit "$status"
 }
+
 trap restore_uncommitted_manifest EXIT
 
 require_command fzf
@@ -233,6 +294,7 @@ require_command gh
 require_command git
 require_command make
 require_command scripts/support/python.sh
+
 require_gh_authentication
 require_clean_main
 
@@ -240,12 +302,15 @@ if selection="$(select_packages)"; then
   :
 else
   selection_status=$?
+
   case "$selection_status" in
   1 | 130)
     echo "No packages selected."
     exit 0
     ;;
-  *) exit "$selection_status" ;;
+  *)
+    exit "$selection_status"
+    ;;
   esac
 fi
 
@@ -260,9 +325,17 @@ versions=()
 
 while IFS=$'\t' read -r package version; do
   [ -n "$package" ] || continue
-  level="$(choose_level "$package" "$version")"
-  if [ "$level" = skip ]; then
-    continue
+
+  tag="$package-v$version"
+
+  if tag_exists_on_origin "$tag"; then
+    level="$(choose_level "$package" "$version")"
+
+    if [ "$level" = skip ]; then
+      continue
+    fi
+  else
+    level="current"
   fi
 
   packages+=("$package")
@@ -277,18 +350,31 @@ fi
 
 echo
 echo "Release plan:"
+
 for index in "${!packages[@]}"; do
-  printf '  %-28s %-5s from %s\n' "${packages[$index]}" "${levels[$index]}" "${versions[$index]}"
+  if [ "${levels[$index]}" = current ]; then
+    printf '  %-28s release %s\n' \
+      "${packages[$index]}" \
+      "${versions[$index]}"
+  else
+    printf '  %-28s %-5s from %s\n' \
+      "${packages[$index]}" \
+      "${levels[$index]}" \
+      "${versions[$index]}"
+  fi
 done
 
 echo
 printf 'Proceed with commits, pushes, releases, registry sync, and docs rebuild? [y/N] '
+
 if ! IFS= read -r confirmation <&3; then
   echo "Release wizard input closed before confirmation." >&2
   exit 1
 fi
+
 case "$confirmation" in
-y | Y | yes | YES) ;;
+y | Y | yes | YES)
+  ;;
 *)
   echo "Release cancelled."
   exit 0
@@ -302,32 +388,59 @@ for index in "${!packages[@]}"; do
   package="${packages[$index]}"
   level="${levels[$index]}"
   manifest="packages/$package/package.toml"
-  current_manifest="$manifest"
 
-  printf '\n==> Releasing %s (%s)\n' "$package" "$level"
+  if [ "$level" = current ]; then
+    printf '\n==> Releasing %s %s\n' \
+      "$package" \
+      "${versions[$index]}"
 
-  scripts/support/python.sh scripts/release/bump.py \
-    --package "$package" \
-    --level "$level"
+    new_version="$(manifest_version "$manifest")"
+    tag="$package-v$new_version"
 
-  new_version="$(manifest_version "$manifest")"
-  tag="$package-v$new_version"
+    make check
 
-  make check
+    changed_paths="$(git status --porcelain=v1 --untracked-files=all)"
+    if [ -n "$changed_paths" ]; then
+      echo "Release checks changed files before publishing $package:" >&2
+      printf '%s\n' "$changed_paths" >&2
+      exit 1
+    fi
+  else
+    current_manifest="$manifest"
 
-  changed_paths="$(git status --porcelain=v1 --untracked-files=all)"
-  expected_line=" M $manifest"
-  if [ "$changed_paths" != "$expected_line" ]; then
-    echo "Release checks changed unexpected files before committing $package:" >&2
-    printf '%s\n' "$changed_paths" >&2
-    exit 1
+    printf '\n==> Releasing %s (%s)\n' \
+      "$package" \
+      "$level"
+
+    scripts/support/python.sh scripts/release/bump.py \
+      --package "$package" \
+      --level "$level"
+
+    new_version="$(manifest_version "$manifest")"
+    tag="$package-v$new_version"
+
+    make check
+
+    changed_paths="$(git status --porcelain=v1 --untracked-files=all)"
+    expected_line=" M $manifest"
+
+    if [ "$changed_paths" != "$expected_line" ]; then
+      echo "Release checks changed unexpected files before committing $package:" >&2
+      printf '%s\n' "$changed_paths" >&2
+      exit 1
+    fi
+
+    git add -- "$manifest"
+
+    git commit \
+      --only \
+      -m "chore(release): bump $package to $new_version" \
+      -- "$manifest"
+
+    current_manifest=""
+
+    git push origin main
   fi
-
-  git add -- "$manifest"
-  git commit --only -m "chore(release): bump $package to $new_version" -- "$manifest"
-  current_manifest=""
-
-  git push origin main
 
   scripts/support/python.sh scripts/release/release.py \
     --package "$package" \
