@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "inbox-demo"
-version = "0.1.0"
+version = "0.1.1"
 kind = "widget"
 description = "Representative GitHub, GitLab, and Homebrew messages for EasyBar's native inbox."
 license = "Apache-2.0"
