@@ -36,6 +36,7 @@ MANIFEST_KEYS = {
 
 
 def fail(message: str) -> None:
+    """Exit with a validation error."""
     raise ValueError(message)
 
 
@@ -51,6 +52,7 @@ class SemanticVersion:
 
     @classmethod
     def parse(cls, value: str) -> SemanticVersion | None:
+        """Parse a semantic version when the value is valid."""
         version = value.split("+", 1)[0]
         core_and_prerelease = version.split("-", 1)
         core = core_and_prerelease[0].split(".")
@@ -73,6 +75,7 @@ class SemanticVersion:
         return cls(major, minor, patch, prerelease)
 
     def __lt__(self, other: object) -> bool:
+        """Compare versions using semantic-version precedence."""
         if not isinstance(other, SemanticVersion):
             return NotImplemented
 
@@ -101,6 +104,7 @@ class SemanticVersion:
         return len(self.prerelease) < len(other.prerelease)
 
     def __str__(self) -> str:
+        """Return the normalized semantic version."""
         core = f"{self.major}.{self.minor}.{self.patch}"
         return core if not self.prerelease else core + "-" + ".".join(self.prerelease)
 
@@ -116,6 +120,7 @@ class VersionConstraint:
 
     @classmethod
     def parse(cls, raw_value: str) -> VersionConstraint | None:
+        """Parse an exact or caret version constraint."""
         trimmed = raw_value.strip()
         if not trimmed:
             return None
@@ -138,6 +143,7 @@ class VersionConstraint:
         return cls(trimmed, exact, None, None)
 
     def contains(self, version: SemanticVersion) -> bool:
+        """Return whether the constraint accepts a version."""
         if self.exact is not None:
             return self.exact == version
         assert self.minimum is not None
@@ -146,6 +152,7 @@ class VersionConstraint:
 
 
 def safe_file(package_dir: Path, relative: object, label: str) -> Path:
+    """Resolve and validate a package-relative file."""
     if not isinstance(relative, str) or not relative:
         fail(f"{package_dir.name}: {label} must be a non-empty string")
     path = Path(relative)
@@ -158,6 +165,7 @@ def safe_file(package_dir: Path, relative: object, label: str) -> Path:
 
 
 def load_manifests() -> dict[str, tuple[Path, dict]]:
+    """Load all package manifests."""
     manifests: dict[str, tuple[Path, dict]] = {}
     for manifest_path in sorted(PACKAGES.glob("*/package.toml")):
         package_dir = manifest_path.parent
@@ -178,6 +186,7 @@ def load_manifests() -> dict[str, tuple[Path, dict]]:
 
 
 def validate_manifest(name: str, package_dir: Path, manifest: dict, names: set[str]) -> None:
+    """Validate package metadata and declared files."""
     if manifest.get("manifest_version") != 2:
         fail(f"{name}: manifest_version must be 2")
     unknown_keys = sorted(set(manifest) - MANIFEST_KEYS)
@@ -253,10 +262,12 @@ def validate_manifest(name: str, package_dir: Path, manifest: dict, names: set[s
 
 
 def validate_cycles(manifests: dict[str, tuple[Path, dict]]) -> None:
+    """Reject cyclic package dependencies."""
     visited: set[str] = set()
     active: list[str] = []
 
     def visit(name: str) -> None:
+        """Visit one package while detecting dependency cycles."""
         if name in active:
             fail("dependency cycle: " + " -> ".join(active + [name]))
         if name in visited:
@@ -272,6 +283,7 @@ def validate_cycles(manifests: dict[str, tuple[Path, dict]]) -> None:
 
 
 def validate_dependency_kinds(manifests: dict[str, tuple[Path, dict]]) -> None:
+    """Validate dependency package kinds."""
     for name, (_, manifest) in manifests.items():
         for dependency in manifest.get("dependencies", {}):
             dependency_kind = manifests[dependency][1].get("kind")
@@ -328,6 +340,7 @@ def validate_dependency_compatibility(manifests: dict[str, tuple[Path, dict]]) -
 
 
 def main() -> int:
+    """Run the command-line entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--print-widgets", action="store_true")
     args = parser.parse_args()

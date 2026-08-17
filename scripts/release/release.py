@@ -19,6 +19,7 @@ BRANCH = "main"
 
 
 def git(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    """Run Git with captured text output."""
     return subprocess.run(
         ["git", *arguments],
         cwd=ROOT,
@@ -29,6 +30,7 @@ def git(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]
 
 
 def load_release(package: str) -> tuple[str, str]:
+    """Load a package version and derive its tag."""
     if not PACKAGE_NAME.fullmatch(package):
         raise ValueError(f"invalid package name: {package}")
     manifest_path = PACKAGES / package / "package.toml"
@@ -43,6 +45,7 @@ def load_release(package: str) -> tuple[str, str]:
 
 
 def preflight(tag: str) -> str:
+    """Validate repository state before a release."""
     status = git("status", "--porcelain=v1", "--untracked-files=all").stdout.strip()
     if status:
         raise ValueError("worktree must be clean before creating a release")
@@ -78,6 +81,7 @@ def preflight(tag: str) -> str:
 
 
 def main() -> int:
+    """Run the command-line entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", required=True)
     parser.add_argument("--publish", action="store_true")

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Guide maintainers through package releases.
 set -Eeuo pipefail
 
 trap 'echo "$(basename "${BASH_SOURCE[0]}") failed at line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
@@ -18,6 +19,7 @@ DOCS_WORKFLOW="docs.yml"
 WORKFLOW_DISCOVERY_ATTEMPTS=60
 WORKFLOW_DISCOVERY_DELAY_SECONDS=2
 
+# Exit unless a required command is available.
 require_command() {
   local command_name="$1"
 
@@ -27,6 +29,7 @@ require_command() {
   fi
 }
 
+# Require a clean main branch synchronized with its remote.
 require_clean_main() {
   local branch
   local head
@@ -55,6 +58,7 @@ require_clean_main() {
   fi
 }
 
+# Require an authenticated GitHub CLI session.
 require_gh_authentication() {
   if ! gh auth status >/dev/null 2>&1; then
     echo "GitHub CLI authentication is required. Run: gh auth login" >&2
@@ -62,6 +66,7 @@ require_gh_authentication() {
   fi
 }
 
+# Return whether a release tag exists on the remote.
 tag_exists_on_origin() {
   local tag="$1"
   local status
@@ -80,6 +85,7 @@ tag_exists_on_origin() {
   exit 1
 }
 
+# Read a package version from its manifest.
 manifest_version() {
   local manifest="$1"
 
@@ -100,6 +106,7 @@ print(version)
 PY
 }
 
+# Prompt for the packages to release.
 select_packages() {
   local manifests
   local manifest
@@ -128,6 +135,7 @@ select_packages() {
       --prompt='Packages> '
 }
 
+# Prompt for a semantic-version bump level.
 choose_level() {
   local package="$1"
   local current_version="$2"
@@ -170,6 +178,7 @@ choose_level() {
   done
 }
 
+# Find the latest matching workflow run.
 latest_workflow_run_id() {
   local repository="$1"
   local workflow="$2"
@@ -191,6 +200,7 @@ latest_workflow_run_id() {
   gh "${arguments[@]}"
 }
 
+# Wait for a release workflow to finish.
 wait_for_release_workflow() {
   local package="$1"
   local tag="$2"
@@ -227,6 +237,7 @@ wait_for_release_workflow() {
   exit 1
 }
 
+# Start a release workflow and wait for completion.
 trigger_and_wait_for_workflow() {
   local repository="$1"
   local workflow="$2"
@@ -272,6 +283,7 @@ trigger_and_wait_for_workflow() {
 
 current_manifest=""
 
+# Restore a manifest left uncommitted by a failed release.
 restore_uncommitted_manifest() {
   local status=$?
 

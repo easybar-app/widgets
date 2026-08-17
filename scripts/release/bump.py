@@ -20,6 +20,7 @@ VERSION_LINE = re.compile(r'(?m)^version = "([^"]+)"$')
 
 
 def bump_version(version: str, level: str) -> str:
+    """Return a version with the requested component bumped."""
     match = STABLE_SEMVER.fullmatch(version)
     if match is None:
         raise ValueError(f"version must be stable semantic version: {version}")
@@ -37,6 +38,7 @@ def bump_version(version: str, level: str) -> str:
 
 
 def main() -> int:
+    """Run the command-line entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", required=True)
     parser.add_argument("--level", required=True, choices=("major", "minor", "patch"))

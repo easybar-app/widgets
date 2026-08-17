@@ -18,10 +18,12 @@ LICENSE = ROOT / "LICENSE"
 
 
 def fail(message: str) -> None:
+    """Exit with a validation error."""
     raise ValueError(message)
 
 
 def archive_info(name: str, size: int, mode: int) -> tarfile.TarInfo:
+    """Create normalized metadata for an archive entry."""
     info = tarfile.TarInfo(name)
     info.size = size
     info.mode = mode
@@ -34,6 +36,7 @@ def archive_info(name: str, size: int, mode: int) -> tarfile.TarInfo:
 
 
 def package_files(package_dir: Path) -> list[tuple[str, Path]]:
+    """Collect files included in a release archive."""
     files: list[tuple[str, Path]] = []
     for path in sorted(package_dir.rglob("*")):
         relative_path = path.relative_to(package_dir)
@@ -53,6 +56,7 @@ def package_files(package_dir: Path) -> list[tuple[str, Path]]:
 
 
 def write_archive(package_dir: Path, archive_path: Path) -> str:
+    """Write a deterministic package archive."""
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with archive_path.open("wb") as raw_output:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw_output, mtime=0) as compressed:
@@ -69,6 +73,7 @@ def write_archive(package_dir: Path, archive_path: Path) -> str:
 
 
 def main() -> int:
+    """Run the command-line entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", required=True)
     parser.add_argument("--version")
