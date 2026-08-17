@@ -1,0 +1,29 @@
+manifest_version = 2
+name = "github-status"
+version = "0.1.0"
+kind = "widget"
+description = "Live GitHub service health in the menu bar."
+license = "Apache-2.0"
+minimum_easybar_kit_version = "0.1.0"
+entrypoint = "widget.lua"
+readme = "README.md"
+categories = ["developer-tools", "system"]
+
+[repository]
+url = "https://github.com/easybar-app/widgets"
+path = "packages/github-status"
+
+[dependencies]
+shared = "^0.1.0"
+
+[requirements]
+commands = ["curl"]
+
+[[settings]]
+namespace = "github-status"
+key = "refresh_interval_minutes"
+type = "integer"
+minimum = 5
+maximum = 1440
+default = 15
+description = "Minutes between GitHub status checks."

@@ -102,6 +102,35 @@ local function registry_package(name, latest, releases)
 	})
 end
 
+local function github_status_summary(active)
+	local incidents = json.array({})
+	if active then
+		incidents[#incidents + 1] = json.object({
+			id = "incident-1",
+			name = "Incident with GitHub.com",
+			impact = "critical",
+			created_at = "2026-08-17T13:40:03Z",
+			updated_at = "2026-08-17T14:04:45Z",
+			shortlink = "https://stspg.io/example",
+			incident_updates = json.array({
+				json.object({ body = "Actions is experiencing degraded performance." }),
+			}),
+			components = json.array({
+				json.object({ name = "Actions" }),
+				json.object({ name = "API Requests" }),
+			}),
+		})
+	end
+	return json.object({
+		status = json.object({
+			indicator = active and "minor" or "none",
+			description = active and "Partially Degraded Service" or "All Systems Operational",
+		}),
+		incidents = incidents,
+		scheduled_maintenances = json.array({}),
+	})
+end
+
 local function widget_release(name, version)
 	return "https://github.com/easybar-app/widgets/releases/download/"
 		.. name
@@ -136,6 +165,16 @@ local function decoded_fixture(value)
 			mergeStateStatus = "CLEAN",
 			reviewDecision = "APPROVED",
 			headRefOid = "0123456789abcdef",
+		})
+	elseif value == "github-status-active" then
+		return github_status_summary(true)
+	elseif value == "github-status-operational" then
+		return github_status_summary(false)
+	elseif value == "github-status-malformed" then
+		return json.object({
+			status = json.object({ description = "Unknown" }),
+			incidents = json.object({}),
+			scheduled_maintenances = json.array({}),
 		})
 	elseif value == "gitlab-issues" then
 		return json.array({ gitlab_issue(1) })
