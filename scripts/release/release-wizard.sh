@@ -281,25 +281,76 @@ trigger_and_wait_for_workflow() {
   exit 1
 }
 
-current_manifest=""
+bumped_manifests=()
 
-# Restore a manifest left uncommitted by a failed release.
-restore_uncommitted_manifest() {
+# Restore version manifests left uncommitted by a failed release preparation.
+restore_uncommitted_manifests() {
   local status=$?
+  local manifest
 
-  if
-    [ "$status" -ne 0 ] &&
-      [ -n "$current_manifest" ] &&
-      ! git diff --quiet -- "$current_manifest"
-  then
-    git restore -- "$current_manifest"
-    echo "Restored uncommitted manifest after failure: $current_manifest" >&2
+  if [ "$status" -ne 0 ]; then
+    for manifest in "${bumped_manifests[@]}"; do
+      if [ -n "$(git status --porcelain=v1 -- "$manifest")" ]; then
+        git restore --staged --worktree -- "$manifest" >/dev/null 2>&1 || true
+        echo "Restored uncommitted manifest after failure: $manifest" >&2
+      fi
+    done
   fi
 
   exit "$status"
 }
 
-trap restore_uncommitted_manifest EXIT
+trap restore_uncommitted_manifests EXIT
+
+# Require that validation changed only the manifests intentionally bumped by the wizard.
+require_expected_release_changes() {
+  local changed_paths
+  local expected_paths=""
+  local manifest
+
+  changed_paths="$(git status --porcelain=v1 --untracked-files=all | LC_ALL=C sort)"
+
+  if [ "${#bumped_manifests[@]}" -gt 0 ]; then
+    expected_paths="$(
+      for manifest in "${bumped_manifests[@]}"; do
+        printf ' M %s\n' "$manifest"
+      done | LC_ALL=C sort
+    )"
+  fi
+
+  if [ "$changed_paths" != "$expected_paths" ]; then
+    echo "Release checks changed unexpected files:" >&2
+    printf '%s\n' "$changed_paths" >&2
+    exit 1
+  fi
+}
+
+# Commit every requested manifest bump together and push main once.
+commit_release_bumps() {
+  local commit_message="chore(release): bump package versions"
+  local manifest
+  local package
+  local version
+
+  if [ "${#bumped_manifests[@]}" -eq 0 ]; then
+    return
+  fi
+
+  if [ "${#bumped_manifests[@]}" -eq 1 ]; then
+    manifest="${bumped_manifests[0]}"
+    package="$(basename -- "$(dirname -- "$manifest")")"
+    version="$(manifest_version "$manifest")"
+    commit_message="chore(release): bump $package to $version"
+  fi
+
+  git add -- "${bumped_manifests[@]}"
+
+  git commit \
+    -m "$commit_message" \
+    -- "${bumped_manifests[@]}"
+
+  git push origin main
+}
 
 require_command fzf
 require_command gh
@@ -377,7 +428,7 @@ for index in "${!packages[@]}"; do
 done
 
 echo
-printf 'Proceed with commits, pushes, releases, registry sync, and docs rebuild? [y/N] '
+printf 'Proceed with version bumps, one validation/commit/push, releases, registry sync, and docs rebuild? [y/N] '
 
 if ! IFS= read -r confirmation <&3; then
   echo "Release wizard input closed before confirmation." >&2
@@ -393,73 +444,51 @@ y | Y | yes | YES)
   ;;
 esac
 
+for index in "${!packages[@]}"; do
+  package="${packages[$index]}"
+  level="${levels[$index]}"
+
+  if [ "$level" = current ]; then
+    continue
+  fi
+
+  manifest="packages/$package/package.toml"
+  bumped_manifests+=("$manifest")
+
+  printf '\n==> Bumping %s (%s)\n' \
+    "$package" \
+    "$level"
+
+  scripts/support/python.sh scripts/release/bump.py \
+    --package "$package" \
+    --level "$level"
+done
+
+printf '\n==> Validating release plan\n'
+
+make check
+
+require_expected_release_changes
+commit_release_bumps
+
+release_commit="$(git rev-parse HEAD)"
 release_tags=()
 release_commits=()
 
 for index in "${!packages[@]}"; do
   package="${packages[$index]}"
-  level="${levels[$index]}"
   manifest="packages/$package/package.toml"
+  version="$(manifest_version "$manifest")"
+  tag="$package-v$version"
 
-  if [ "$level" = current ]; then
-    printf '\n==> Releasing %s %s\n' \
-      "$package" \
-      "${versions[$index]}"
-
-    new_version="$(manifest_version "$manifest")"
-    tag="$package-v$new_version"
-
-    make check
-
-    changed_paths="$(git status --porcelain=v1 --untracked-files=all)"
-    if [ -n "$changed_paths" ]; then
-      echo "Release checks changed files before publishing $package:" >&2
-      printf '%s\n' "$changed_paths" >&2
-      exit 1
-    fi
-  else
-    current_manifest="$manifest"
-
-    printf '\n==> Releasing %s (%s)\n' \
-      "$package" \
-      "$level"
-
-    scripts/support/python.sh scripts/release/bump.py \
-      --package "$package" \
-      --level "$level"
-
-    new_version="$(manifest_version "$manifest")"
-    tag="$package-v$new_version"
-
-    make check
-
-    changed_paths="$(git status --porcelain=v1 --untracked-files=all)"
-    expected_line=" M $manifest"
-
-    if [ "$changed_paths" != "$expected_line" ]; then
-      echo "Release checks changed unexpected files before committing $package:" >&2
-      printf '%s\n' "$changed_paths" >&2
-      exit 1
-    fi
-
-    git add -- "$manifest"
-
-    git commit \
-      --only \
-      -m "chore(release): bump $package to $new_version" \
-      -- "$manifest"
-
-    current_manifest=""
-
-    git push origin main
-  fi
+  printf '\n==> Publishing %s\n' "$tag"
 
   scripts/support/python.sh scripts/release/release.py \
     --package "$package" \
     --publish
 
   release_tags+=("$tag")
-  release_commits+=("$(git rev-parse HEAD)")
+  release_commits+=("$release_commit")
 done
 
 for index in "${!packages[@]}"; do

@@ -50,12 +50,15 @@ To release one or more packages interactively, run:
 make release-wizard
 ```
 
-The wizard discovers `packages/*/package.toml` and lets you select packages with `fzf`. If the
-manifest's current version has never been released, the wizard publishes that version directly. If the
-current version already has a release tag, it asks for a patch, minor, or major bump, validates the
-repository, commits and pushes the manifest bump, and publishes the new package tag. It then waits for
-every package release workflow to finish successfully, synchronizes `easybar-app/registry`, waits for
-that sync, and finally triggers the documentation rebuild.
+The wizard discovers `packages/*/package.toml` and lets you select packages with `fzf`. If a
+manifest's current version has never been released, the wizard publishes that version directly. If a
+current version already has a release tag, it asks for a patch, minor, or major bump.
+
+For a multi-package release, the wizard applies all requested version bumps first, validates the
+repository once, commits all bumped manifests together, and pushes `main` once. It then publishes the
+selected package tags and waits for every package release workflow to finish successfully. After all
+package releases have completed, it synchronizes `easybar-app/registry` once, waits for that sync, and
+finally triggers one documentation rebuild.
 
 ## Documentation
 
