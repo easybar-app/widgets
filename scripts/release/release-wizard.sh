@@ -121,6 +121,7 @@ select_packages() {
 
   while IFS= read -r manifest; do
     package="$(basename -- "$(dirname -- "$manifest")")"
+
     if ! version="$(manifest_version "$manifest")"; then
       return 2
     fi
@@ -200,11 +201,10 @@ latest_workflow_run_id() {
   gh "${arguments[@]}"
 }
 
-# Wait for a release workflow to finish.
+# Wait for a package release workflow to finish.
 wait_for_release_workflow() {
   local package="$1"
   local tag="$2"
-  local commit_sha="$3"
   local attempt
   local run_id=""
 
@@ -216,8 +216,7 @@ wait_for_release_workflow() {
         --repo "$WIDGETS_REPOSITORY" \
         --workflow "$RELEASE_WORKFLOW" \
         --event push \
-        --commit "$commit_sha" \
-        --limit 10 \
+        --limit 100 \
         --json databaseId,headBranch \
         --jq ".[] | select(.headBranch == \"$tag\") | .databaseId" |
         head -n 1
@@ -233,11 +232,11 @@ wait_for_release_workflow() {
     sleep "$WORKFLOW_DISCOVERY_DELAY_SECONDS"
   done
 
-  echo "Could not find the release workflow for $package tag $tag at commit $commit_sha." >&2
+  echo "Could not find the release workflow for $package tag $tag." >&2
   exit 1
 }
 
-# Start a release workflow and wait for completion.
+# Start a workflow and wait for completion.
 trigger_and_wait_for_workflow() {
   local repository="$1"
   local workflow="$2"
@@ -471,9 +470,7 @@ make check
 require_expected_release_changes
 commit_release_bumps
 
-release_commit="$(git rev-parse HEAD)"
 release_tags=()
-release_commits=()
 
 for index in "${!packages[@]}"; do
   package="${packages[$index]}"
@@ -488,14 +485,12 @@ for index in "${!packages[@]}"; do
     --publish
 
   release_tags+=("$tag")
-  release_commits+=("$release_commit")
 done
 
 for index in "${!packages[@]}"; do
   wait_for_release_workflow \
     "${packages[$index]}" \
-    "${release_tags[$index]}" \
-    "${release_commits[$index]}"
+    "${release_tags[$index]}"
 done
 
 trigger_and_wait_for_workflow \
