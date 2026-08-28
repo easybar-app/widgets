@@ -16,6 +16,19 @@ local function load_widget_with_defaults()
 	return host.load(root, easybar_root, "inbox-brew")
 end
 
+--- Completes one metadata update followed by an outdated-package snapshot.
+local function complete_metadata_refresh(state, fixture)
+	assert(table.concat(state.commands[1].command, " ") == "brew update", "refresh must update Homebrew metadata")
+	state:complete_next_command("", 0)
+	state:run_next_timer()
+	assert(
+		table.concat(state.commands[1].command, " ") == "/usr/bin/env HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
+		"refresh must check outdated packages after updating metadata"
+	)
+	state:complete_next_command(fixture, 0)
+	state:run_next_timer()
+end
+
 --- Verifies that the configured refresh interval controls source metadata and timers.
 local function test_configures_the_refresh_interval()
 	local state = load_widget({
@@ -40,8 +53,7 @@ local function test_configures_the_refresh_interval()
 		assert(state:source_action("refresh_interval")).title == "Refresh every 15 minutes",
 		"the Homebrew context menu must show the refresh interval"
 	)
-	state:complete_next_command('{"scenario":"brew-one"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-one"}')
 	local item = assert(state:item("formula:easybar"))
 	assert(item.source.order == 7, "the Homebrew source must use the configured order")
 	assert(not state:item_has_action(item.id, "open"), "Homebrew must not duplicate the native Open action")
@@ -81,8 +93,7 @@ local function test_automatic_updates_toggle_persists_and_starts_a_cycle()
 		assert(state:source_action("toggle_automatic_updates")).title == "Automatic updates: Off",
 		"Homebrew must show the disabled automatic-update state"
 	)
-	state:complete_next_command('{"scenario":"brew-empty"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-empty"}')
 	state.context_action_handler({ action_id = "toggle_automatic_updates" })
 	assert(state.storage_values["brew-inbox:automatic_updates"] == true, "Homebrew must persist automatic updates")
 	assert(
@@ -92,13 +103,21 @@ local function test_automatic_updates_toggle_persists_and_starts_a_cycle()
 	assert(table.concat(state.commands[1].command, " ") == "brew update", "enabling automatic updates must start a cycle")
 end
 
+--- Verifies disabled package upgrades do not leave Homebrew metadata stale.
+local function test_disabled_automatic_updates_refresh_metadata_without_upgrading()
+	local state = load_widget({ ["brew-inbox:automatic_updates"] = false })
+	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-one"}')
+	assert(#state.commands == 0, "disabled automatic updates must not upgrade outdated packages")
+	assert(state:item("formula:easybar") ~= nil, "disabled automatic updates must publish the fresh snapshot")
+end
+
 --- Verifies that item-triggered refresh activity remains on that inbox item.
 local function test_item_refresh_stays_inline()
 	local state = load_widget()
 	state:run_next_timer()
 	assert(state:has_busy_source_action(), "Homebrew startup refresh must show source activity")
-	state:complete_next_command('{"scenario":"brew-one"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-one"}')
 	assert(not state:has_busy_source_action(), "Homebrew source activity must end after refresh")
 
 	state.action_handler({ action_id = "upgrade", target_widget_id = "formula:easybar" })
@@ -120,19 +139,16 @@ end
 local function test_parser_retains_snapshot_and_handles_warning_braces()
 	local state = load_widget()
 	state:run_next_timer()
-	state:complete_next_command('{"scenario":"brew-one"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-one"}')
 
 	state.context_action_handler({ action_id = "refresh" })
-	state:complete_next_command('{"scenario":"brew-malformed"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-malformed"}')
 	assert(state:item("formula:easybar") ~= nil, "Homebrew malformed responses must retain the last good snapshot")
 	assert(state:item("error") ~= nil, "Homebrew malformed responses must publish an error")
 	assert(state.items[1].id == "error", "Homebrew errors must be published before capped snapshot items")
 
 	state.context_action_handler({ action_id = "refresh" })
-	state:complete_next_command('Warning {details}\n{"scenario":"brew-one"}\nTrailing {hint}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, 'Warning {details}\n{"scenario":"brew-one"}\nTrailing {hint}')
 	assert(state:item("formula:easybar") ~= nil, "Homebrew must decode JSON surrounded by brace-containing warnings")
 	assert(state:item("warning") ~= nil, "Homebrew must retain surrounding warning output")
 	assert(state:item("error") == nil, "a valid Homebrew snapshot must clear the prior error")
@@ -141,6 +157,8 @@ end
 --- Verifies that cancelling a refresh clears its busy state.
 local function test_refresh_cancellation_clears_activity()
 	local state = load_widget()
+	state:run_next_timer()
+	state:complete_next_command("", 0)
 	state:run_next_timer()
 	assert(state:has_busy_source_action(), "Homebrew refresh must start with source activity")
 	state.context_action_handler({ action_id = "cancel" })
@@ -153,8 +171,7 @@ end
 local function test_mutation_cancellation_reconciles_snapshot()
 	local state = load_widget()
 	state:run_next_timer()
-	state:complete_next_command('{"scenario":"brew-one"}', 0)
-	state:run_next_timer()
+	complete_metadata_refresh(state, '{"scenario":"brew-one"}')
 
 	state.action_handler({ action_id = "upgrade", target_widget_id = "formula:easybar" })
 	state.context_action_handler({ action_id = "cancel" })
@@ -180,5 +197,6 @@ test_mutation_cancellation_reconciles_snapshot()
 test_configures_the_refresh_interval()
 test_automatic_updates_default_on_and_upgrade_eligible_packages()
 test_automatic_updates_toggle_persists_and_starts_a_cycle()
+test_disabled_automatic_updates_refresh_metadata_without_upgrading()
 
 print("Homebrew inbox widget regression checks passed")

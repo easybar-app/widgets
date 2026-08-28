@@ -26,7 +26,7 @@ source_order = 30
 context_order = 30
 ```
 
-When `automatic_updates = false`, scheduled outdated-package checks still run so the Inbox remains current, but automatic `brew update` and package upgrades are skipped. Manual source and package actions remain available.
+When `automatic_updates = false`, scheduled checks still update Homebrew metadata so the Inbox remains current, but package upgrades are skipped. Manual source and package actions remain available.
 
 `source_order` controls the Homebrew group when the inbox is grouped by source.
 `context_order` independently controls its position in the inbox source menu. Lower values appear

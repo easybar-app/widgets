@@ -83,6 +83,7 @@ local state = {
 local pending_refresh = nil
 local refresh
 local run_automatic_update_cycle
+local run_metadata_refresh
 local run_upgrade_all
 local log = easybar.log
 
@@ -688,16 +689,19 @@ run_upgrade_all = function()
 	run_operation_steps("upgrade_all", "Homebrew upgrade", steps)
 end
 
---- Runs the automatic update-and-upgrade cycle when enabled.
-run_automatic_update_cycle = function(reason)
-	if not automatic_updates then
-		refresh(reason)
-		return
-	end
-
-	run_operation("automatic_update", "Homebrew update", { "brew", "update" }, EXEC.update, nil, function()
-		refresh("automatic_update")
+--- Updates Homebrew metadata, refreshes the snapshot, and optionally upgrades eligible packages.
+run_metadata_refresh = function(reason, upgrade_packages)
+	reason = tostring(reason or "unspecified")
+	upgrade_packages = upgrade_packages == true
+	local operation_id = upgrade_packages and "automatic_update" or "metadata_update"
+	run_operation(operation_id, "Homebrew update", { "brew", "update" }, EXEC.update, nil, function()
+		refresh(upgrade_packages and "automatic_update" or reason)
 	end)
+end
+
+--- Runs the scheduled metadata refresh and applies upgrades only when enabled.
+run_automatic_update_cycle = function(reason)
+	run_metadata_refresh(reason, automatic_updates)
 end
 
 --- Persists automatic-update behavior and starts a cycle when enabled.
@@ -764,7 +768,7 @@ easybar.inbox.on_action(SOURCE, function(event)
 	log(easybar.level.debug, "inbox action received action=" .. action_id .. " item_id=" .. item_id)
 
 	if action_id == "refresh" then
-		refresh("manual")
+		run_metadata_refresh("manual", false)
 	elseif action_id == "upgrade" then
 		local package = package_for_id(item_id)
 		if package ~= nil and package_is_upgradeable(package) then
@@ -819,7 +823,7 @@ easybar.inbox.on_context_action(SOURCE, function(event)
 			end
 		end
 	elseif action_id == "refresh" then
-		refresh("manual")
+		run_metadata_refresh("manual", false)
 	elseif action_id == "update" then
 		run_operation("update", "Homebrew update", { "brew", "update" }, EXEC.update)
 	elseif action_id == "toggle_automatic_updates" then

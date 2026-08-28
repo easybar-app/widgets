@@ -26,7 +26,7 @@ namespace = "brew-inbox"
 key = "automatic_updates"
 type = "boolean"
 default = true
-description = "Automatically update Homebrew metadata and upgrade eligible outdated packages."
+description = "Automatically upgrade eligible outdated packages after refreshing Homebrew metadata."
 
 [[settings]]
 namespace = "brew-inbox"
