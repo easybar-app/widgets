@@ -30,6 +30,8 @@
 ---@class RetryModule
 local M = {}
 
+local NETWORK_BACKOFF_SECONDS = { 2, 5, 10 }
+
 local TRANSIENT_NETWORK_PATTERNS = {
 	-- Generic timeouts.
 	"i/o timeout",
@@ -72,6 +74,16 @@ local TRANSIENT_NETWORK_PATTERNS = {
 	"http 503",
 	"http 504",
 }
+
+---Returns a fresh copy of the standard backoff used for transient network reads.
+---@return number[] delays Retry delays of 2, 5, and 10 seconds.
+function M.network_backoff_delays()
+	local delays = {}
+	for index, delay in ipairs(NETWORK_BACKOFF_SECONDS) do
+		delays[index] = delay
+	end
+	return delays
+end
 
 ---Returns whether a failed command looks like a transient network failure.
 ---Successful commands are never classified as transient, even when their output contains words

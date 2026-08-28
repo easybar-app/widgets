@@ -4,6 +4,42 @@ local host = assert(loadfile(root .. "/tests/support/widget_host.lua"))()
 host.configure(root, easybar_root)
 
 local retry = require("retry")
+
+local network_backoff = retry.network_backoff_delays()
+assert(#network_backoff == 3, "network backoff must provide three retry delays")
+assert(
+	network_backoff[1] == 2 and network_backoff[2] == 5 and network_backoff[3] == 10,
+	"network backoff must use 2/5/10 seconds"
+)
+network_backoff[1] = 99
+assert(retry.network_backoff_delays()[1] == 2, "network backoff callers must receive independent copies")
+
+local transient_errors = {
+	"dial tcp 10.0.1.201:443: connect: no route to host",
+	"connect: network is unreachable",
+	"connection refused",
+	"connection reset by peer",
+	"could not resolve host",
+	"i/o timeout",
+	"TLS handshake timeout",
+	"unexpected EOF",
+}
+for _, message in ipairs(transient_errors) do
+	assert(retry.is_transient_network_error(message, 1), "expected transient network error: " .. message)
+end
+assert(
+	not retry.is_transient_network_error("authentication failed", 1),
+	"authentication failures must not be retried"
+)
+assert(
+	not retry.is_transient_network_error("success mentions timeout", 0),
+	"successful commands must never be retried"
+)
+assert(
+	not retry.is_transient_network_error("no route to host", 130),
+	"cancelled commands must never be retried"
+)
+
 local easybar, state = host.new(root)
 local completed
 local attempts = 0
