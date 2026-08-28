@@ -27,18 +27,9 @@ local transient_errors = {
 for _, message in ipairs(transient_errors) do
 	assert(retry.is_transient_network_error(message, 1), "expected transient network error: " .. message)
 end
-assert(
-	not retry.is_transient_network_error("authentication failed", 1),
-	"authentication failures must not be retried"
-)
-assert(
-	not retry.is_transient_network_error("success mentions timeout", 0),
-	"successful commands must never be retried"
-)
-assert(
-	not retry.is_transient_network_error("no route to host", 130),
-	"cancelled commands must never be retried"
-)
+assert(not retry.is_transient_network_error("authentication failed", 1), "authentication failures must not be retried")
+assert(not retry.is_transient_network_error("success mentions timeout", 0), "successful commands must never be retried")
+assert(not retry.is_transient_network_error("no route to host", 130), "cancelled commands must never be retried")
 
 local easybar, state = host.new(root)
 local completed
