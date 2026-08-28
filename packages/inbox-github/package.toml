@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "inbox-github"
-version = "0.5.4"
+version = "0.5.5"
 kind = "widget"
 description = "GitHub notifications and pull-request actions in EasyBar's native inbox."
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ url = "https://github.com/easybar-app/widgets"
 path = "packages/inbox-github"
 
 [dependencies]
-shared = "^0.1.0"
+shared = "^0.1.4"
 
 [requirements]
 commands = ["gh"]

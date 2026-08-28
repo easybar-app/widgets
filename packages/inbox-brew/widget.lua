@@ -64,7 +64,7 @@ SOURCE_PRESENTATION.order = source_order
 local POLL_INTERVAL_SECONDS = refresh_interval_minutes * 60
 local NETWORK_READY_DELAY_SECONDS = 3
 local MIN_ACTIVITY_COMPLETION_DELAY_SECONDS = 0.2
-local REFRESH_BACKOFF_SECONDS = { 2, 5 }
+local REFRESH_BACKOFF_SECONDS = retry.network_backoff_delays()
 local MAX_ITEMS = 500
 
 local EXEC = {

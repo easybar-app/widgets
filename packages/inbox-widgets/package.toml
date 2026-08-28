@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "inbox-widgets"
-version = "0.7.7"
+version = "0.7.8"
 kind = "widget"
 description = "Widget package updates in the native inbox."
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ url = "https://github.com/easybar-app/widgets"
 path = "packages/inbox-widgets"
 
 [dependencies]
-shared = "^0.1.0"
+shared = "^0.1.4"
 
 [requirements]
 commands = ["curl"]

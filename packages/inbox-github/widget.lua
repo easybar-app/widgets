@@ -12,7 +12,7 @@ local SOURCE_PRESENTATION = {
 	color = "#A371F7",
 }
 local NETWORK_READY_DELAY_SECONDS = 3
-local REFRESH_BACKOFF_SECONDS = { 2, 5 }
+local REFRESH_BACKOFF_SECONDS = retry.network_backoff_delays()
 local MAX_ITEMS = 500
 local PR_VIEW_TIMEOUT_SECONDS = 20
 local PR_MERGE_TIMEOUT_SECONDS = 5 * 60
