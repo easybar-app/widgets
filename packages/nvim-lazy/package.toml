@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "nvim-lazy"
-version = "0.2.0"
+version = "0.2.1"
 kind = "widget"
 description = "Available lazy.nvim plugin updates in a standalone status item."
 license = "Apache-2.0"
@@ -14,7 +14,7 @@ url = "https://github.com/easybar-app/widgets"
 path = "packages/nvim-lazy"
 
 [dependencies]
-shared = "^0.1.0"
+shared = "^0.2.1"
 
 [requirements]
 commands = ["nvim"]

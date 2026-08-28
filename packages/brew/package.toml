@@ -1,6 +1,6 @@
 manifest_version = 2
 name = "brew"
-version = "0.3.0"
+version = "0.3.1"
 kind = "widget"
 description = "Homebrew updates and upgrades in a standalone popup."
 license = "Apache-2.0"
@@ -15,7 +15,7 @@ path = "packages/brew"
 
 [dependencies]
 brew-policy = "^0.1.0"
-shared = "^0.1.0"
+shared = "^0.2.1"
 
 [requirements]
 commands = ["brew"]
