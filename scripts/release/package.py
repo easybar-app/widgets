@@ -35,33 +35,44 @@ def archive_info(name: str, size: int, mode: int) -> tarfile.TarInfo:
     return info
 
 
-def package_files(package_dir: Path) -> list[tuple[str, Path]]:
-    """Collect files included in a release archive."""
-    files: list[tuple[str, Path]] = []
-    for path in sorted(package_dir.rglob("*")):
-        relative_path = path.relative_to(package_dir)
-        if relative_path.parts[0] == "tests":
-            continue
-        if path.is_symlink():
-            fail(f"{package_dir.name}: symbolic links are not allowed: {path.name}")
-        if path.is_dir():
-            continue
-        if not path.is_file():
-            fail(f"{package_dir.name}: unsupported package entry: {path.name}")
-        files.append((relative_path.as_posix(), path))
+def package_files(package_dir: Path, manifest: dict) -> list[tuple[str, Path]]:
+    """Collect only manifest-declared files and runtime assets for an archive."""
+    selected = {
+        package_dir / "package.toml",
+        package_dir / manifest["readme"],
+    }
+    if manifest.get("kind") == "widget":
+        selected.add(package_dir / manifest["entrypoint"])
+    for relative in manifest.get("exports", {}).values():
+        selected.add(package_dir / relative)
 
-    if not any(relative == "LICENSE" for relative, _ in files):
-        files.append(("LICENSE", LICENSE))
-    return sorted(files)
+    assets = package_dir / "assets"
+    if assets.exists():
+        for path in assets.rglob("*"):
+            if path.is_symlink():
+                fail(
+                    f"{package_dir.name}: symbolic links are not allowed: "
+                    f"{path.relative_to(package_dir)}"
+                )
+            if path.is_file():
+                selected.add(path)
+
+    selected.add(LICENSE)
+    return sorted(
+        (path.relative_to(package_dir).as_posix(), path)
+        if path != LICENSE
+        else ("LICENSE", path)
+        for path in selected
+    )
 
 
-def write_archive(package_dir: Path, archive_path: Path) -> str:
+def write_archive(package_dir: Path, manifest: dict, archive_path: Path) -> str:
     """Write a deterministic package archive."""
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with archive_path.open("wb") as raw_output:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw_output, mtime=0) as compressed:
             with tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
-                for relative, path in package_files(package_dir):
+                for relative, path in package_files(package_dir, manifest):
                     data = path.read_bytes()
                     info = archive_info(relative, len(data), 0o644)
                     archive.addfile(info, io.BytesIO(data))
@@ -98,7 +109,7 @@ def main() -> int:
             )
 
         archive_path = args.output_dir / f"{args.package}-{version}.tar.gz"
-        digest = write_archive(package_dir, archive_path)
+        digest = write_archive(package_dir, manifest, archive_path)
     except (OSError, tarfile.TarError, tomllib.TOMLDecodeError, ValueError) as error:
         print(f"Package archive failed: {error}", file=sys.stderr)
         return 1
