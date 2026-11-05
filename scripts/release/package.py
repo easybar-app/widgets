@@ -70,7 +70,10 @@ def write_archive(package_dir: Path, manifest: dict, archive_path: Path) -> str:
     """Write a deterministic package archive."""
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with archive_path.open("wb") as raw_output:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw_output, mtime=0) as compressed:
+        # Pin the historical level so Python versions produce the same release checksum.
+        with gzip.GzipFile(
+            filename="", mode="wb", fileobj=raw_output, compresslevel=9, mtime=0
+        ) as compressed:
             with tarfile.open(fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT) as archive:
                 for relative, path in package_files(package_dir, manifest):
                     data = path.read_bytes()
