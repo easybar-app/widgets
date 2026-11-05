@@ -858,6 +858,23 @@ local function mark_notification_read(item_id)
 	end)
 end
 
+--- Marks a dismissed notification as done even if a read request is still in flight.
+local function dismiss_notification(item_id)
+	if notification_for_id(item_id) == nil then
+		return
+	end
+	easybar.spawn_async({ "gh", "api", "--method", "DELETE", "notifications/threads/" .. item_id }, {
+		timeout_seconds = 20,
+		log_operation = "dismiss",
+	}, function(output, code)
+		if code == 0 then
+			refresh("post_mutation")
+		else
+			publish_error(output, "GitHub could not mark the notification as done", "Could not dismiss notification")
+		end
+	end)
+end
+
 easybar.inbox.on_action(SOURCE, function(event)
 	local action_id = tostring(event.action_id or "unknown")
 	local item_id = tostring(event.target_widget_id or "")
@@ -867,6 +884,8 @@ easybar.inbox.on_action(SOURCE, function(event)
 		refresh("manual")
 	elseif action_id == "mark_read" then
 		mark_notification_read(item_id)
+	elseif action_id == "dismiss" then
+		dismiss_notification(item_id)
 	elseif action_id == "prepare_merge" then
 		prepare_merge(item_id)
 	elseif action_id == "confirm_merge" then

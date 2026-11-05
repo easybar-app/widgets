@@ -1,6 +1,6 @@
 # GitHub Inbox Widget
 
-`widget.lua` publishes GitHub notifications to the native inbox and supports refreshing and guarded pull-request merging. EasyBar's native **Read** and **Mark all read** controls also mark the corresponding notification threads read on GitHub, without adding a duplicate widget action.
+`widget.lua` publishes GitHub notifications to the native inbox and supports refreshing and guarded pull-request merging. EasyBar's native **Read** and **Mark all read** controls also mark the corresponding notification threads read on GitHub. **Dismiss** and **Dismiss all** also mark the corresponding threads done on GitHub.
 
 ## Requirements
 

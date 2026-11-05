@@ -76,6 +76,17 @@ local function test_native_read_action_marks_the_github_notification_read()
 	assert(state:item("thread-1") == nil, "the read GitHub notification must disappear after refresh")
 end
 
+local function test_native_dismiss_marks_the_github_notification_done()
+	local state = load_widget()
+	state:run_next_timer()
+	state:complete_next_command("github-one", 0)
+	state.action_handler({ action_id = "dismiss", target_widget_id = "thread-1" })
+	assert(table.concat(state.commands[1].command, " ") == "gh api --method DELETE notifications/threads/thread-1")
+	state:complete_next_command("", 0)
+	state:complete_next_command("github-empty", 0)
+	assert(state:item("thread-1") == nil)
+end
+
 --- Verifies overlapping remote read actions coalesce their follow-up refreshes.
 local function test_overlapping_native_read_actions_coalesce_refreshes()
 	local state = load_widget()
@@ -184,6 +195,7 @@ end
 
 test_item_actions_do_not_duplicate_native_controls()
 test_native_read_action_marks_the_github_notification_read()
+test_native_dismiss_marks_the_github_notification_done()
 test_overlapping_native_read_actions_coalesce_refreshes()
 test_merge_method_setting_persists_and_drives_merge()
 test_merge_confirmation_defaults_to_immediate()
